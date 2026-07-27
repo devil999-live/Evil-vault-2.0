@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evil Vault | Secure Storage & OSINT</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* ==========================================================================
+           CSS VARIABLES (DARK NEON & LIGHT CORPORATE MODES)
+           ========================================================================== */
+        :root {
+            --bg-base: #070005; 
+            --bg-surface: rgba(20, 5, 15, 0.7);
+            --bg-card: linear-gradient(145deg, rgba(30, 10, 20, 0.8), rgba(15, 5, 10, 0.9));
+            --text-main: #f0f4f8;
+            --text-muted: #8b949e;
+            
+            --neon-red: #ff003c;
+            --neon-blue: #00e5ff;
+            --neon-orange: #ffaa00;
+            
+            --accent-primary: var(--neon-red);
+            --accent-secondary: var(--neon-blue);
+            
+            --border-glass: rgba(255, 255, 255, 0.1);
+            --shadow-depth: 0 20px 40px rgba(0, 0, 0, 0.8);
+            --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        body.light-mode {
+            --bg-base: #f0f2f5;
+            --bg-surface: rgba(255, 255, 255, 0.8);
+            --bg-card: linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(245, 247, 250, 1));
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --border-glass: rgba(0, 0, 0, 0.1);
+            --shadow-depth: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --accent-primary: #d90429;
+            --accent-secondary: #0077b6;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+        body {
+            font-family: 'Inter', sans-serif; background-color: var(--bg-base);
+            color: var(--text-main); min-height: 100vh; overflow-x: hidden;
+            display: flex; flex-direction: column; transition: background-color 0.4s ease;
+        }
+        body:not(.light-mode) {
+            background-image: radial-gradient(circle at 15% 20%, rgba(255, 0, 60, 0.05) 0%, transparent 40%),
+                              radial-gradient(circle at 85% 80%, rgba(0, 229, 255, 0.05) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        input, textarea, select, .selectable { user-select: text; }
+        h1, h2, h3 { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
+        .hidden { display: none !important; }
+        
+        .glass-panel {
+            background: var(--bg-surface); backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--border-glass); border-radius: 16px; box-shadow: var(--shadow-depth);
+            transition: var(--transition-smooth);
+        }
+
+        body:not(.light-mode) .neon-text-red { color: #fff; text-shadow: 0 0 5px #fff, 0 0 20px var(--neon-red); }
+        .dynamic-theme-text { color: var(--accent-secondary); transition: var(--transition-smooth); }
+        body:not(.light-mode) .dynamic-theme-text { text-shadow: 0 0 5px #fff, 0 0 20px var(--accent-secondary); }
+
+        button, select {
+            font-family: 'Inter', sans-serif; cursor: pointer; border: none; outline: none; 
+            background: transparent; color: var(--text-main); transition: var(--transition-smooth);
+        }
+
+        .btn-primary {
+            background: rgba(128, 128, 128, 0.1); border: 1px solid var(--accent-primary); color: var(--text-main);
+            padding: 10px 20px; border-radius: 8px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+        }
+        body:not(.light-mode) .btn-primary { box-shadow: 0 0 15px rgba(255, 0, 60, 0.2); }
+        .btn-primary:hover:not(:disabled) { background: var(--accent-primary); color: #fff; transform: translateY(-2px); }
+
+        .btn-theme {
+            background: rgba(128, 128, 128, 0.1); border: 1px solid var(--accent-secondary); color: var(--text-main);
+            padding: 10px 20px; border-radius: 8px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+            transition: var(--transition-smooth);
+        }
+        body:not(.light-mode) .btn-theme { box-shadow: 0 0 10px var(--accent-secondary); }
+        .btn-theme:hover:not(:disabled) { background: var(--accent-secondary); color: #000; transform: translateY(-2px); box-shadow: 0 0 20px var(--accent-secondary); }
+
+        .btn-icon {
+            padding: 8px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            background: rgba(128,128,128,0.1); border: 1px solid var(--border-glass); color: var(--text-muted);
+        }
+        .btn-icon:hover { color: var(--text-main); border-color: var(--accent-secondary); transform: scale(1.05); }
+
+        input[type="text"], input[type="password"], textarea, select {
+            width: 100%; background: rgba(128, 128, 128, 0.1); border: 1px solid var(--border-glass); 
+            color: var(--text-main); padding: 12px 16px; border-radius: 8px; font-size: 1rem;
+            font-family: 'Inter', sans-serif; transition: var(--transition-smooth);
+        }
+        input:focus, textarea:focus, select:focus { border-color: var(--accent-secondary); outline: none; }
+
+        #app-container { width: 100%; max-width: 1400px; margin: 0 auto; padding: 24px; flex-grow: 1; display: flex; flex-direction: column; }
+
+        #login-view { justify-content: center; align-items: center; height: 100vh; padding: 0; margin: 0; display: flex; flex-direction: column; z-index: 9999; }
+        .login-box { width: 100%; max-width: 400px; padding: 40px; text-align: center; border-color: var(--accent-primary); }
+        .vault-logo { font-size: 3rem; margin-bottom: 10px; color: var(--accent-primary); }
+        .login-title { font-size: 2rem; margin-bottom: 5px; font-weight: 900; letter-spacing: 2px; }
+        #pass-input { text-align: center; font-size: 1.5rem; letter-spacing: 5px; font-family: 'Orbitron'; color: var(--neon-blue); margin-bottom: 20px;}
+
+        .dash-header {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
+            padding: 20px; margin-bottom: 25px; border-radius: 12px; position: sticky; top: 20px; z-index: 10;
+        }
+        .header-left { display: flex; align-items: center; gap: 15px; }
+        .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .controls-row { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+
+        #categories-view .dash-header { border-bottom: 2px solid var(--accent-primary); }
+        #notes-view .dash-header, #full-note-view .dash-header { border-bottom: 2px solid var(--accent-secondary); transition: var(--transition-smooth); }
+
+        .dashboard-grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); transition: all 0.3s; }
+        .dashboard-grid.list-view { grid-template-columns: 1fr; }
+        .dashboard-grid.list-view .grid-card { height: auto; min-height: 80px; }
+        .dashboard-grid.list-view .card-inner { flex-direction: row; align-items: center; padding: 15px 20px; }
+        .dashboard-grid.list-view .card-content { text-align: left; padding-top: 0; justify-content: flex-start; margin-right: 150px; }
+        .dashboard-grid.list-view .card-actions { top: 50%; transform: translateY(-50%) translateZ(0); }
+
+        .grid-card { perspective: 1000px; height: auto; min-height: 180px; cursor: pointer; position: relative; }
+        .card-inner {
+            width: 100%; height: 100%; background: var(--bg-card);
+            border: 1px solid var(--border-glass); border-radius: 16px; padding: 20px;
+            display: flex; flex-direction: column; transform-style: preserve-3d;
+            transition: transform 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
+            box-shadow: var(--shadow-depth); position: relative;
+        }
+        
+        .grid-card:hover .card-inner {
+            transform: translateY(-5px) rotateX(2deg) rotateY(-2deg);
+            border-color: var(--card-color, var(--border-glass));
+        }
+        body:not(.light-mode) .grid-card:hover .card-inner { box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 15px var(--card-color, transparent); }
+
+        .card-inner.is-pinned { border-top: 3px solid var(--neon-orange); }
+        .card-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; z-index: 5; transform: translateZ(30px); }
+        .card-actions .btn-icon { padding: 6px; background: rgba(128,128,128,0.2); }
+        
+        .card-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; text-align: center; padding-top: 20px; }
+        .cat-card .card-content h3 { font-size: 1.1rem; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+        .note-card { height: auto; min-height: 180px; }
+        .note-card .card-content { align-items: flex-start; justify-content: flex-start; text-align: left; }
+        .note-card .card-content p { font-size: 0.9rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+
+        .timestamp { position: relative; margin-top: 15px; font-size: 0.7rem; color: var(--text-muted); font-family: monospace; }
+
+        .trash-divider { grid-column: 1 / -1; margin-top: 40px; margin-bottom: 20px; border-top: 1px dashed var(--border-glass); text-align: center; }
+        .trash-divider span { background: var(--bg-base); padding: 0 15px; color: var(--text-muted); font-size: 0.85rem; position: relative; top: -10px; text-transform: uppercase; }
+        .trashed-card .card-inner { opacity: 0.6; filter: grayscale(80%); border-style: dashed; }
+
+        #full-note-view .full-note-content { 
+            padding: 40px; min-height: 50vh; font-size: 1.1rem; line-height: 1.8; 
+            white-space: pre-wrap; word-wrap: break-word; border-top: 3px solid var(--accent-secondary); 
+            transition: var(--transition-smooth);
+        }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85);
+            display: flex; align-items: center; justify-content: center; z-index: 1000;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-card { width: 100%; max-width: 500px; padding: 30px; transform: translateY(30px) scale(0.95); transition: transform 0.4s; }
+        .modal-overlay.active .modal-card { transform: translateY(0) scale(1); }
+        .modal-body textarea { min-height: 150px; resize: vertical; margin-bottom: 15px; }
+        
+        .color-picker { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; justify-content: center; }
+        .color-dot { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+        .color-dot.selected { border-color: #fff; transform: scale(1.2); box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+
+        svg { width: 16px; height: 16px; fill: currentColor; }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-view">
+        <div class="glass-panel login-box">
+            <div class="vault-logo">🛡️</div>
+            <h1 class="login-title neon-text-red">EVIL VAULT</h1>
+            <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.8rem; letter-spacing: 2px;">RESTRICTED ACCESS</p>
+            <div id="login-status" style="color: var(--accent-primary); font-size: 0.85rem; margin-bottom: 10px; min-height: 20px;"></div>
+            <div class="pass-input-container">
+                <input type="password" id="pass-input" placeholder="••••" maxlength="4" autocomplete="off">
+            </div>
+            <button id="btn-unlock" class="btn-primary" style="width: 100%;">DECRYPT SYSTEM</button>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-container" class="hidden">
+        <input type="file" id="import-file-input" accept=".json" style="display: none;">
+
+        <!-- CATEGORIES VIEW -->
+        <div id="categories-view" class="view-section">
+            <header class="glass-panel dash-header">
+                <div class="header-left">
+                    <h2 class="header-title neon-text-red">COLLECTIONS</h2>
+                </div>
+                <div class="header-actions">
+                    <button id="btn-theme-toggle" class="btn-icon" title="Toggle Day/Night">🌙</button>
+                    <button id="btn-toggle-view" class="btn-icon" title="Toggle Grid/List">☰</button>
+                    <button id="btn-osint" class="btn-primary" style="border-color: var(--neon-blue); color: var(--neon-blue);">+ OSINT</button>
+                    <button id="btn-export" class="btn-icon" title="Export Intel">⬇️</button>
+                    <button id="btn-import" class="btn-icon" title="Import/Merge Intel">⬆️</button>
+                    <button id="btn-add-cat" class="btn-primary">+ NEW</button>
+                </div>
+            </header>
+            
+            <div class="controls-row">
+                <select id="sort-cats" style="width: 200px;">
+                    <option value="newest">Sort: Newest</option>
+                    <option value="oldest">Sort: Oldest</option>
+                    <option value="az">Sort: A-Z</option>
+                </select>
+            </div>
+
+            <div id="categories-grid" class="dashboard-grid"></div>
+            <div id="trash-divider-cats" class="trash-divider hidden"><span>🗑️ Recycled (Auto-Purges after 30 Days)</span></div>
+            <div id="trashed-categories-grid" class="dashboard-grid"></div>
+        </div>
+
+        <!-- NOTES VIEW -->
+        <div id="notes-view" class="view-section hidden">
+            <header class="glass-panel dash-header">
+                <div class="header-left">
+                    <button id="btn-back-to-cats" class="btn-icon">←</button>
+                    <h2 id="active-cat-title" class="header-title dynamic-theme-text">Category Name</h2>
+                </div>
+                <div class="header-actions">
+                    <button id="btn-quick-paste" class="btn-icon" title="Quick Paste from Clipboard">📋</button>
+                    <button id="btn-add-note" class="btn-theme">+ ADD INTEL</button>
+                </div>
+            </header>
+            
+            <div class="controls-row">
+                <input type="text" id="search-input" placeholder="Search operational intelligence..." autocomplete="off" style="flex-grow: 1;">
+                <select id="sort-notes" style="width: 150px;">
+                    <option value="newest">Newest</option>
+                    <option value="oldest">Oldest</option>
+                    <option value="az">A-Z</option>
+                </select>
+            </div>
+
+            <div id="notes-grid" class="dashboard-grid"></div>
+            <div id="trash-divider-notes" class="trash-divider hidden"><span>🗑️ Recycled (Auto-Purges after 30 Days)</span></div>
+            <div id="trashed-notes-grid" class="dashboard-grid"></div>
+        </div>
+
+        <!-- FULL NOTE VIEW -->
+        <div id="full-note-view" class="view-section hidden">
+            <header class="glass-panel dash-header">
+                <div class="header-left">
+                    <button id="btn-back-to-notes" class="btn-icon">←</button>
+                    <h2 class="header-title dynamic-theme-text">INTEL DETAILS</h2>
+                </div>
+                <button id="btn-copy-full" class="btn-theme">COPY INTEL</button>
+            </header>
+            <div class="glass-panel full-note-content selectable">
+                <div id="full-note-text"></div>
+            </div>
+        </div>
+
+        <!-- OSINT TARGETS VIEW -->
+        <div id="osint-view" class="view-section hidden">
+            <header class="glass-panel dash-header" style="border-bottom: 2px solid var(--neon-blue);">
+                <div class="header-left">
+                    <button id="btn-back-from-osint" class="btn-icon">←</button>
+                    <h2 class="header-title" style="color: var(--neon-blue);">OSINT TARGET DATABASE</h2>
+                </div>
+                <div class="header-actions">
+                    <button id="btn-open-osint-modal" class="btn-primary" style="border-color: var(--neon-blue); color: var(--neon-blue);">+ NEW TARGET</button>
+                </div>
+            </header>
+            
+            <div class="controls-row">
+                <input type="text" id="search-osint-input" placeholder="Search target database..." autocomplete="off" style="flex-grow: 1;">
+            </div>
+
+            <div id="osint-targets-grid" class="dashboard-grid"></div>
+        </div>
+    </div>
+
+    <!-- UNIVERSAL MODAL -->
+    <div id="app-modal" class="modal-overlay">
+        <div class="glass-panel modal-card">
+            <h3 id="modal-title" style="margin-bottom: 20px; color: var(--accent-secondary);">Title</h3>
+            <div class="modal-body">
+                <input type="text" id="modal-input-text" class="hidden" placeholder="Enter name...">
+                <textarea id="modal-input-area" class="hidden" placeholder="Enter details..."></textarea>
+                
+                <div id="color-picker" class="color-picker hidden">
+                    <div class="color-dot selected" data-color="var(--border-glass)" style="background: #888;"></div>
+                    <div class="color-dot" data-color="#ff003c" style="background: #ff003c;"></div>
+                    <div class="color-dot" data-color="#00e5ff" style="background: #00e5ff;"></div>
+                    <div class="color-dot" data-color="#9d00ff" style="background: #9d00ff;"></div>
+                    <div class="color-dot" data-color="#00ff66" style="background: #00ff66;"></div>
+                    <div class="color-dot" data-color="#ffaa00" style="background: #ffaa00;"></div>
+                    <div class="color-dot" data-color="#ff00ff" style="background: #ff00ff;"></div>
+                    <div class="color-dot" data-color="#ffff00" style="background: #ffff00;"></div>
+                    <div class="color-dot" data-color="#00ffff" style="background: #00ffff;"></div>
+                    <div class="color-dot" data-color="#ffffff" style="background: #ffffff;"></div>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px;">
+                <button id="modal-btn-cancel">CANCEL</button>
+                <button id="modal-btn-save" class="btn-theme">SAVE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- OSINT TARGET MODAL -->
+    <div id="osint-modal" class="modal-overlay">
+        <div class="glass-panel modal-card">
+            <h3 style="margin-bottom: 20px; color: var(--neon-blue);">ADD OSINT TARGET</h3>
+            <div class="modal-body">
+                <label style="display: block; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-muted);">TARGET NAME</label>
+                <input type="text" id="osint-target-name" placeholder="e.g. John_Doe" style="margin-bottom: 15px;">
+                
+                <label style="display: block; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-muted);">RAW DATA (Paste complete notes block)</label>
+                <textarea id="osint-raw-data" placeholder="Paste raw intel here..." style="min-height: 180px;"></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px;">
+                <button id="osint-btn-cancel">CANCEL</button>
+                <button id="osint-btn-save" class="btn-theme">PARSE & SAVE TARGET</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, query, where, onSnapshot, getDocs, setDoc } 
+        from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCJfw-FOR3um5CdFbYXh4m5niMLMDpu1tU",
+            authDomain: "evil-vault.firebaseapp.com",
+            projectId: "evil-vault",
+            storageBucket: "evil-vault.firebasestorage.app",
+            messagingSenderId: "765657171943",
+            appId: "1:765657171943:web:830baffa2431525c999f42"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const AppState = {
+            isDecoy: false, isLocked: true, activeCategoryId: null, activeFullNoteText: "",
+            loginAttempts: 0, lockoutKey: 'evil_vault_lockout', unsubs: { categories: null, notes: null },
+            sortCats: 'newest', sortNotes: 'newest', isListView: localStorage.getItem('vault_list_view') === 'true',
+            selectedColor: 'var(--border-glass)',
+            vaultPrefix: 'vault_alpha_'
+        };
+
+        // RESTORED CORRECT COLLECTION PREFIXES MATCHING YOUR EXISTING DATABASE
+        const COLL_CATS = () => AppState.vaultPrefix + "categories";
+        const COLL_NOTES = () => AppState.vaultPrefix + "notes";
+        const COLL_OSINT = () => AppState.vaultPrefix + "osint_targets";
+
+        const DOM = {
+            views: { 
+                login: document.getElementById('login-view'), 
+                app: document.getElementById('app-container'), 
+                cats: document.getElementById('categories-view'), 
+                notes: document.getElementById('notes-view'), 
+                fullNote: document.getElementById('full-note-view'),
+                osint: document.getElementById('osint-view')
+            },
+            grids: { 
+                cats: document.getElementById('categories-grid'), 
+                catsTrash: document.getElementById('trashed-categories-grid'), 
+                notes: document.getElementById('notes-grid'), 
+                notesTrash: document.getElementById('trashed-notes-grid'),
+                osint: document.getElementById('osint-targets-grid')
+            },
+            dividers: { cats: document.getElementById('trash-divider-cats'), notes: document.getElementById('trash-divider-notes') },
+            sort: { cats: document.getElementById('sort-cats'), notes: document.getElementById('sort-notes') },
+            search: document.getElementById('search-input'), colorPicker: document.getElementById('color-picker'),
+            modal: { overlay: document.getElementById('app-modal'), title: document.getElementById('modal-title'), inputTxt: document.getElementById('modal-input-text'), inputArea: document.getElementById('modal-input-area'), btnSave: document.getElementById('modal-btn-save'), btnCancel: document.getElementById('modal-btn-cancel') },
+            osintModal: { overlay: document.getElementById('osint-modal'), nameInput: document.getElementById('osint-target-name'), rawArea: document.getElementById('osint-raw-data'), btnSave: document.getElementById('osint-btn-save'), btnCancel: document.getElementById('osint-btn-cancel') }
+        };
+
+        const SVGS = {
+            edit: `<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`,
+            trash: `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`,
+            copy: `<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>`,
+            restore: `<svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21z"/></svg>`,
+            permDelete: `<svg viewBox="0 0 24 24"><path d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM3 18c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V8H3v10zM14 5h-3l-1-1H6L5 5H2v2h12z"/></svg>`,
+            pin: `<svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`,
+            clone: `<svg viewBox="0 0 24 24"><path d="M11 11h2v-3h3v-2h-3v-3h-2v3h-3v2h3v3zm10-5h-3v2h3v11h-11v-3h-2v3c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2v-11c0-1.1-.9-2-2-2zm-6 12h-11c-1.1 0-2-.9-2-2v-11c0-1.1.9-2 2-2h11c1.1 0 2 .9 2 2v11c0 1.1-.9 2-2 2z"/></svg>`
+        };
+
+        const formatDate = (ts) => ts ? new Date(ts).toLocaleDateString() : '';
+        const escapeHTML = (str) => str.replace(/[&<>'"]/g, t => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[t] || t));
+        
+        function fallbackCopy(text, btnElement) {
+            const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; document.body.appendChild(ta); ta.focus(); ta.select();
+            try { document.execCommand('copy'); const orig = btnElement.innerHTML; btnElement.innerHTML = `✓`; setTimeout(() => btnElement.innerHTML = orig, 1500); } catch (e) {}
+            document.body.removeChild(ta);
+        }
+
+        const showView = (v) => {
+            [DOM.views.cats, DOM.views.notes, DOM.views.fullNote, DOM.views.osint].forEach(el => { if(el) el.classList.add('hidden'); });
+            if(v === 'categories' && DOM.views.cats) DOM.views.cats.classList.remove('hidden');
+            if(v === 'notes' && DOM.views.notes) DOM.views.notes.classList.remove('hidden');
+            if(v === 'fullNote' && DOM.views.fullNote) DOM.views.fullNote.classList.remove('hidden');
+            if(v === 'osint' && DOM.views.osint) DOM.views.osint.classList.remove('hidden');
+        };
+
+        if(localStorage.getItem('vault_light_mode') === 'true') document.body.classList.add('light-mode');
+        document.getElementById('btn-theme-toggle').onclick = () => {
+            document.body.classList.toggle('light-mode');
+            localStorage.setItem('vault_light_mode', document.body.classList.contains('light-mode'));
+        };
+
+        const updateGridClasses = () => {
+            const grids = [DOM.grids.cats, DOM.grids.catsTrash, DOM.grids.notes, DOM.grids.notesTrash, DOM.grids.osint];
+            grids.forEach(g => { if(g) AppState.isListView ? g.classList.add('list-view') : g.classList.remove('list-view'); });
+        };
+        updateGridClasses();
+        document.getElementById('btn-toggle-view').onclick = () => {
+            AppState.isListView = !AppState.isListView;
+            localStorage.setItem('vault_list_view', AppState.isListView);
+            updateGridClasses();
+        };
+
+        const sortData = (arr, type) => {
+            return arr.sort((a, b) => {
+                if (a.pinned !== b.pinned) return b.pinned ? 1 : -1;
+                if (type === 'newest') return (b.timestamp || 0) - (a.timestamp || 0);
+                if (type === 'oldest') return (a.timestamp || 0) - (b.timestamp || 0);
+                if (type === 'az') return (a.name || a.text || '').localeCompare(b.name || b.text || '');
+                return 0;
+            });
+        };
+
+        DOM.sort.cats.onchange = (e) => { AppState.sortCats = e.target.value; loadCategories(); };
+        DOM.sort.notes.onchange = (e) => { AppState.sortNotes = e.target.value; loadNotes(AppState.activeCategoryId); };
+
+        let idleTimer;
+        const lockApp = () => {
+            if(!AppState.isLocked) {
+                AppState.isLocked = true; DOM.views.login.classList.remove('hidden'); DOM.views.app.classList.add('hidden');
+                document.getElementById('pass-input').value = ""; document.getElementById('login-status').innerText = "SESSION LOCKED";
+            }
+        };
+        const resetIdleTimer = () => { if(!AppState.isLocked) { clearTimeout(idleTimer); idleTimer = setTimeout(lockApp, 3 * 60 * 1000); }};
+        ['mousemove', 'keydown', 'touchstart'].forEach(evt => document.addEventListener(evt, resetIdleTimer));
+        document.addEventListener('visibilitychange', () => { if(document.hidden) lockApp(); });
+
+        const handleLogin = () => {
+            const lockUntil = localStorage.getItem(AppState.lockoutKey);
+            if (lockUntil && Date.now() < parseInt(lockUntil)) return; 
+            
+            const pass = document.getElementById('pass-input').value;
+            const now = new Date();
+            const correctMaster = now.getHours().toString().padStart(2, '0') + now.getMinutes().toString().padStart(2, '0');
+            const correctDecoy = now.getMinutes().toString().padStart(2, '0') + now.getHours().toString().padStart(2, '0');
+
+            if (pass === correctMaster || pass === correctDecoy) {
+                AppState.isDecoy = (pass === correctDecoy && correctMaster !== correctDecoy);
+                AppState.isLocked = false;
+                document.documentElement.style.setProperty('--accent-secondary', 'var(--neon-blue)');
+
+                DOM.views.login.classList.add('hidden'); DOM.views.app.classList.remove('hidden');
+                if(!AppState.unsubs.categories) { showView('categories'); loadCategories(); }
+                resetIdleTimer();
+            } else {
+                AppState.loginAttempts++; document.getElementById('pass-input').value = "";
+                document.getElementById('login-status').innerText = `INVALID HEX. ATTEMPT ${AppState.loginAttempts}/3`;
+                if (AppState.loginAttempts >= 3) localStorage.setItem(AppState.lockoutKey, Date.now() + (30 * 60 * 1000));
+            }
+        };
+        document.getElementById('btn-unlock').onclick = handleLogin;
+        document.getElementById('pass-input').onkeydown = (e) => { if (e.key === 'Enter') handleLogin(); };
+
+        const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+        const processAndRender = async (snapshot, isCat, targetGrid, targetTrashGrid, dividerElement) => {
+            targetGrid.innerHTML = ''; targetTrashGrid.innerHTML = '';
+            let rawData = [];
+            
+            for (const docSnap of snapshot.docs) {
+                const data = docSnap.data();
+                if (data.trashed && data.trashedAt && (Date.now() - data.trashedAt > THIRTY_DAYS)) {
+                    await deleteDoc(doc(db, isCat ? COLL_CATS() : COLL_NOTES(), docSnap.id));
+                    continue; 
+                }
+                rawData.push({ id: docSnap.id, ...data });
+            }
+
+            const sortedData = sortData(rawData, isCat ? AppState.sortCats : AppState.sortNotes);
+            let activeCount = 0, trashCount = 0;
+
+            sortedData.forEach(data => {
+                const isTrashed = data.trashed === true;
+                const card = document.createElement('div');
+                card.className = `grid-card ${isCat ? 'cat-card' : 'note-card'} ${isTrashed ? 'trashed-card' : ''}`;
+                card.dataset.id = data.id; 
+                
+                const customColor = data.color || 'var(--border-glass)';
+                if(isCat) {
+                    card.dataset.name = data.name;
+                    card.dataset.color = customColor;
+                } else {
+                    card.dataset.text = data.text;
+                }
+                
+                const pinClass = data.pinned ? 'is-pinned' : '';
+                const pinIconColor = data.pinned ? 'var(--neon-orange)' : '';
+
+                let actions = isTrashed ? 
+                    `<button class="btn-icon action-restore" title="Restore">${SVGS.restore}</button>
+                     <button class="btn-icon danger action-perm" title="Destroy Permanently">${SVGS.permDelete}</button>` : 
+                    `<button class="btn-icon action-pin" style="color:${pinIconColor}" title="Pin">${SVGS.pin}</button>
+                     ${!isCat ? `<button class="btn-icon action-clone" title="Clone">${SVGS.clone}</button>` : ''}
+                     <button class="btn-icon action-copy" title="Copy">${SVGS.copy}</button>
+                     <button class="btn-icon action-edit" title="Edit">${SVGS.edit}</button>
+                     <button class="btn-icon danger action-delete" title="Trash">${SVGS.trash}</button>`;
+
+                const content = isCat ? `<h3>${escapeHTML(data.name)}</h3>` : `<p>${escapeHTML(data.text)}</p>`;
+                
+                card.innerHTML = `
+                    <div class="card-inner ${pinClass}" style="--card-color: ${customColor}">
+                        <div class="card-actions">${actions}</div>
+                        <div class="card-content">${content}</div>
+                        <div class="timestamp">${formatDate(data.timestamp)}</div>
+                    </div>`;
+
+                isTrashed ? (targetTrashGrid.appendChild(card), trashCount++) : (targetGrid.appendChild(card), activeCount++);
+            });
+
+            if (activeCount === 0) targetGrid.innerHTML = `<div class="empty-state"><h3>No Active Items Found</h3></div>`;
+            dividerElement.classList.toggle('hidden', trashCount === 0);
+        };
+
+        const loadCategories = () => {
+            if (AppState.unsubs.categories) AppState.unsubs.categories();
+            AppState.unsubs.categories = onSnapshot(collection(db, COLL_CATS()), 
+                (snap) => processAndRender(snap, true, DOM.grids.cats, DOM.grids.catsTrash, DOM.dividers.cats),
+                (err) => console.error("Categories Load Error:", err)
+            );
+        };
+
+        const loadNotes = (catId) => {
+            DOM.search.value = '';
+            if (AppState.unsubs.notes) AppState.unsubs.notes();
+            const q = query(collection(db, COLL_NOTES()), where("category", "==", catId));
+            AppState.unsubs.notes = onSnapshot(q, 
+                (snap) => processAndRender(snap, false, DOM.grids.notes, DOM.grids.notesTrash, DOM.dividers.notes),
+                (err) => console.error("Notes Load Error:", err)
+            );
+        };
+
+        let currentModalAction = null;
+        const openModal = (title, type, val, showColors, onSave) => {
+            DOM.modal.title.innerText = title; currentModalAction = onSave;
+            DOM.modal.inputTxt.classList.add('hidden'); DOM.modal.inputArea.classList.add('hidden');
+            DOM.colorPicker.classList.add('hidden');
+            
+            if (type === 'text') { DOM.modal.inputTxt.classList.remove('hidden'); DOM.modal.inputTxt.value = val; setTimeout(() => DOM.modal.inputTxt.focus(), 100); } 
+            else { DOM.modal.inputArea.classList.remove('hidden'); DOM.modal.inputArea.value = val; setTimeout(() => DOM.modal.inputArea.focus(), 100); }
+            
+            if (showColors) {
+                DOM.colorPicker.classList.remove('hidden');
+                document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+                document.querySelector('.color-dot').classList.add('selected');
+                AppState.selectedColor = 'var(--border-glass)';
+            }
+            DOM.modal.overlay.classList.add('active');
+        };
+        
+        document.querySelectorAll('.color-dot').forEach(dot => {
+            dot.onclick = (e) => {
+                document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+                e.target.classList.add('selected');
+                AppState.selectedColor = e.target.dataset.color;
+            };
+        });
+
+        DOM.modal.btnCancel.onclick = () => { DOM.modal.overlay.classList.remove('active'); currentModalAction = null; };
+        DOM.modal.btnSave.onclick = () => {
+            const val = !DOM.modal.inputTxt.classList.contains('hidden') ? DOM.modal.inputTxt.value.trim() : DOM.modal.inputArea.value.trim();
+            if (val && currentModalAction) { currentModalAction(val, AppState.selectedColor); DOM.modal.overlay.classList.remove('active'); currentModalAction = null; }
+        };
+
+        document.addEventListener('click', async (e) => {
+            if(AppState.isLocked && !e.target.closest('#login-view')) return; 
+            
+            if (e.target.closest('#btn-add-cat')) { openModal("NEW COLLECTION", "text", "", true, async (val, col) => { await addDoc(collection(db, COLL_CATS()), { name: val, color: col, trashed: false, pinned: false, timestamp: Date.now() }); }); return; }
+            if (e.target.closest('#btn-add-note')) { openModal("ADD INTEL", "textarea", "", false, async (val) => { await addDoc(collection(db, COLL_NOTES()), { text: val, category: AppState.activeCategoryId, trashed: false, pinned: false, timestamp: Date.now() }); }); return; }
+            if (e.target.closest('#btn-back-to-cats')) { 
+                document.documentElement.style.setProperty('--accent-secondary', 'var(--neon-blue)');
+                showView('categories'); 
+                return; 
+            }
+            if (e.target.closest('#btn-back-to-notes')) { showView('notes'); return; }
+            
+            if (e.target.closest('#btn-quick-paste')) {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if(text) await addDoc(collection(db, COLL_NOTES()), { text: text, category: AppState.activeCategoryId, trashed: false, pinned: false, timestamp: Date.now() });
+                } catch(err) { alert("Clipboard permission denied or unavailable."); }
+                return;
+            }
+
+            const copyFullBtn = e.target.closest('#btn-copy-full'); if(copyFullBtn) { fallbackCopy(AppState.activeFullNoteText, copyFullBtn); return; }
+
+            const cardActionBtn = e.target.closest('.card-actions button');
+            const catCard = e.target.closest('.cat-card');
+            const noteCard = e.target.closest('.note-card');
+
+            if (catCard) {
+                const id = catCard.dataset.id; const name = catCard.dataset.name;
+                if (cardActionBtn) {
+                    const ref = doc(db, COLL_CATS(), id);
+                    if (cardActionBtn.classList.contains('action-copy')) fallbackCopy(name, cardActionBtn);
+                    if (cardActionBtn.classList.contains('action-edit')) openModal("RENAME", "text", name, true, async (val, col) => await updateDoc(ref, { name: val, color: col }));
+                    if (cardActionBtn.classList.contains('action-delete')) await updateDoc(ref, { trashed: true, trashedAt: Date.now() });
+                    if (cardActionBtn.classList.contains('action-restore')) await updateDoc(ref, { trashed: false });
+                    if (cardActionBtn.classList.contains('action-perm') && confirm(`Permanently destroy collection?`)) await deleteDoc(ref);
+                    if (cardActionBtn.classList.contains('action-pin')) {
+                        const isPinned = catCard.querySelector('.card-inner').classList.contains('is-pinned');
+                        await updateDoc(ref, { pinned: !isPinned });
+                    }
+                    return; 
+                }
+                if (!catCard.classList.contains('trashed-card')) { 
+                    AppState.activeCategoryId = id; 
+                    document.getElementById('active-cat-title').innerText = name; 
+                    const themeColor = catCard.dataset.color !== 'var(--border-glass)' ? catCard.dataset.color : 'var(--neon-blue)';
+                    document.documentElement.style.setProperty('--accent-secondary', themeColor);
+                    showView('notes'); loadNotes(id); 
+                }
+            }
+
+            if (noteCard) {
+                const id = noteCard.dataset.id; const text = noteCard.dataset.text;
+                if (cardActionBtn) {
+                    const ref = doc(db, COLL_NOTES(), id);
+                    if (cardActionBtn.classList.contains('action-copy')) fallbackCopy(text, cardActionBtn);
+                    if (cardActionBtn.classList.contains('action-edit')) openModal("UPDATE INTEL", "textarea", text, false, async (val) => await updateDoc(ref, { text: val }));
+                    if (cardActionBtn.classList.contains('action-delete')) await updateDoc(ref, { trashed: true, trashedAt: Date.now() });
+                    if (cardActionBtn.classList.contains('action-restore')) await updateDoc(ref, { trashed: false });
+                    if (cardActionBtn.classList.contains('action-perm') && confirm("Permanently destroy intel?")) await deleteDoc(ref);
+                    if (cardActionBtn.classList.contains('action-pin')) {
+                        const isPinned = noteCard.querySelector('.card-inner').classList.contains('is-pinned');
+                        await updateDoc(ref, { pinned: !isPinned });
+                    }
+                    if (cardActionBtn.classList.contains('action-clone')) {
+                        await addDoc(collection(db, COLL_NOTES()), { text: text + "\n[CLONE]", category: AppState.activeCategoryId, trashed: false, pinned: false, timestamp: Date.now() });
+                    }
+                    return;
+                }
+                if (!noteCard.classList.contains('trashed-card')) { AppState.activeFullNoteText = text; document.getElementById('full-note-text').innerText = text; showView('fullNote'); }
+            }
+        });
+
+        DOM.search.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            document.querySelectorAll('#notes-grid .note-card').forEach(card => card.classList.toggle('hidden', !card.dataset.text.toLowerCase().includes(term)));
+        });
+
+        document.getElementById('btn-export').onclick = async () => {
+            const cSnap = await getDocs(collection(db, COLL_CATS())); const nSnap = await getDocs(collection(db, COLL_NOTES()));
+            const data = { categories: [], notes: [] };
+            cSnap.forEach(d => data.categories.push({ id: d.id, ...d.data() })); nSnap.forEach(d => data.notes.push({ id: d.id, ...d.data() }));
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'}));
+            a.download = `evil_vault_backup.json`; a.click();
+        };
+
+        document.getElementById('btn-import').onclick = () => document.getElementById('import-file-input').click();
+        document.getElementById('import-file-input').onchange = (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const data = JSON.parse(event.target.result); const map = {};
+                    for (const c of data.categories) { const ref = await addDoc(collection(db, COLL_CATS()), { name: c.name, color: c.color, trashed: c.trashed||false, pinned: c.pinned||false, timestamp: c.timestamp||Date.now() }); map[c.id] = ref.id; }
+                    for (const n of data.notes) { await addDoc(collection(db, COLL_NOTES()), { text: n.text, category: map[n.category] || n.category, trashed: n.trashed||false, pinned: n.pinned||false, timestamp: n.timestamp||Date.now() }); }
+                    alert("Import successful!");
+                } catch(err) { alert("Import failed."); } e.target.value = "";
+            }; reader.readAsText(file);
+        };
+
+        // --- OSINT TARGET MANAGER ---
+        if (typeof window._osintUnsub === 'function') {
+            window._osintUnsub();
+        }
+
+        window.loadOsintTargets = () => {
+            const grid = document.getElementById('osint-targets-grid');
+            if (!grid) return;
+
+            window._osintUnsub = onSnapshot(collection(db, COLL_OSINT()), (snapshot) => {
+                grid.innerHTML = '';
+                let count = 0;
+
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    count++;
+
+                    let displayText = data.cleanText;
+                    if (!displayText) {
+                        let lines = [];
+                        if (data.targetName) lines.push(`NAME: ${data.targetName}`);
+                        if (data.extracted?.phoneNumbers?.length) lines.push(`MOBILE: ${data.extracted.phoneNumbers[0]}`);
+                        if (data.extracted?.emailAddresses?.length) lines.push(`EMAIL: ${data.extracted.emailAddresses[0]}`);
+                        if (data.rawNotes) lines.push(`NOTES:\n${data.rawNotes}`);
+                        displayText = lines.join('\n') || JSON.stringify(data, null, 2);
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = 'grid-card note-card';
+                    card.dataset.id = docSnap.id;
+                    card.dataset.text = displayText;
+
+                    card.innerHTML = `
+                        <div class="card-inner" style="--card-color: var(--neon-blue)">
+                            <div class="card-actions">
+                                <button class="btn-icon action-copy-target" title="Copy Formatted Text">${SVGS.copy}</button>
+                                <button class="btn-icon danger action-delete-target" title="Delete Target">${SVGS.trash}</button>
+                            </div>
+                            <div class="card-content" style="align-items: flex-start; justify-content: flex-start; text-align: left;">
+                                <h3 style="color: var(--neon-blue); margin-bottom: 8px;">${escapeHTML(data.targetName || docSnap.id)}</h3>
+                                <p style="font-size: 0.9rem; color: var(--text-main); white-space: pre-wrap; line-height: 1.5;">${escapeHTML(displayText)}</p>
+                            </div>
+                            <div class="timestamp">${formatDate(data.timestamp)}</div>
+                        </div>`;
+                    
+                    grid.appendChild(card);
+                });
+
+                if (count === 0) {
+                    grid.innerHTML = `<div class="empty-state"><h3>No OSINT Targets Logged</h3></div>`;
+                }
+            }, (err) => console.error("OSINT Load Error:", err));
+        };
+
+        const triggerOsintModal = () => {
+            const modalOverlay = document.getElementById('osint-modal');
+            const nameInput = document.getElementById('osint-target-name');
+            const rawArea = document.getElementById('osint-raw-data');
+            
+            if (!modalOverlay || !nameInput) return;
+            
+            nameInput.value = '';
+            rawArea.value = '';
+            modalOverlay.classList.add('active');
+            setTimeout(() => nameInput.focus(), 100);
+        };
+
+        const btnOsintEl = document.getElementById('btn-osint');
+        if (btnOsintEl) {
+            btnOsintEl.onclick = () => {
+                showView('osint');
+                window.loadOsintTargets();
+            };
+        }
+
+        const backFromOsintEl = document.getElementById('btn-back-from-osint');
+        if (backFromOsintEl) {
+            backFromOsintEl.onclick = () => showView('categories');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#btn-open-osint-modal')) {
+                e.preventDefault();
+                triggerOsintModal();
+            }
+        });
+
+        const osintCancelBtnEl = document.getElementById('osint-btn-cancel');
+        if (osintCancelBtnEl) {
+            osintCancelBtnEl.onclick = () => {
+                const modalOverlay = document.getElementById('osint-modal');
+                if (modalOverlay) modalOverlay.classList.remove('active');
+            };
+        }
+
+        const osintSaveBtnEl = document.getElementById('osint-btn-save');
+        if (osintSaveBtnEl) {
+            osintSaveBtnEl.onclick = async () => {
+                const nameInput = document.getElementById('osint-target-name');
+                const rawArea = document.getElementById('osint-raw-data');
+                const modalOverlay = document.getElementById('osint-modal');
+
+                const targetNameInput = nameInput ? nameInput.value.trim() : '';
+                const rawData = rawArea ? rawArea.value.trim() : '';
+
+                if (!targetNameInput || !rawData) {
+                    alert("Please provide both a Target Name and Raw Data.");
+                    return;
+                }
+
+                const docId = targetNameInput.replace(/[^a-zA-Z0-9-_]/g, "_");
+
+                const extractField = (regex) => {
+                    const matches = [...rawData.matchAll(regex)];
+                    return [...new Set(matches.map(m => m[1].trim()).filter(v => v.length > 0))];
+                };
+
+                const names = extractField(/(?:👤\s*NAME:|NAME:)\s*(.*)/gi);
+                const mobiles = extractField(/(?:📞\s*MOBILE:|MOBILE:|NUMBER:)\s*([0-9\s+-]{10,})/gi);
+                const fathers = extractField(/(?:👨\s*FATHER:|FATHER:)\s*(.*)/gi);
+                const alternatives = extractField(/(?:📱\s*ALTERNATIVE:|ALTERNATIVE:)\s*([0-9\s+-]{10,})/gi);
+                const ids = extractField(/(?:🆔\s*ID:|ID:)\s*([0-9]+)/gi);
+                const addresses = extractField(/(?:📍\s*ADDRESS:|ADDRESS:)\s*(.*)/gi);
+
+                const finalName = names[0] || targetNameInput;
+                const finalMobile = mobiles[0] || '';
+                const finalFather = fathers[0] || '';
+                const finalAlternative = alternatives.filter(num => num !== finalMobile)[0] || '';
+                const finalId = ids[0] || '';
+                const finalAddress = addresses[0] || '';
+
+                let cleanLines = [];
+                cleanLines.push(`NAME: ${finalName}`);
+                if (finalMobile) cleanLines.push(`MOBILE: ${finalMobile}`);
+                if (finalFather) cleanLines.push(`FATHER: ${finalFather}`);
+                if (finalAlternative) cleanLines.push(`ALTERNATE NUMBER: ${finalAlternative}`);
+                if (finalId) cleanLines.push(`ID: ${finalId}`);
+                if (finalAddress) cleanLines.push(`ADDRESS: ${finalAddress}`);
+
+                const formattedCleanText = cleanLines.join('\n');
+
+                const structuredData = {
+                    targetName: targetNameInput,
+                    createdAt: new Date().toISOString(),
+                    timestamp: Date.now(),
+                    cleanText: formattedCleanText
+                };
+
+                try {
+                    await setDoc(doc(db, COLL_OSINT(), docId), structuredData);
+                    alert(`OSINT Target "${targetNameInput}" successfully parsed and saved!`);
+                    if (modalOverlay) modalOverlay.classList.remove('active');
+                } catch (err) {
+                    console.error("OSINT Save Error:", err);
+                    alert("Failed to save target to Firebase.");
+                }
+            };
+        }
+
+        document.addEventListener('click', async (e) => {
+            const targetCard = e.target.closest('#osint-targets-grid .grid-card');
+            const actionBtn = e.target.closest('.card-actions button');
+
+            if (targetCard && actionBtn) {
+                const id = targetCard.dataset.id;
+                const ref = doc(db, COLL_OSINT(), id);
+
+                if (actionBtn.classList.contains('action-copy-target')) {
+                    fallbackCopy(targetCard.dataset.text, actionBtn);
+                }
+                if (actionBtn.classList.contains('action-delete-target') && confirm("Permanently delete this OSINT target?")) {
+                    await deleteDoc(ref);
+                }
+            }
+        });
+
+        const searchOsintInputEl = document.getElementById('search-osint-input');
+        if (searchOsintInputEl) {
+            searchOsintInputEl.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                document.querySelectorAll('#osint-targets-grid .grid-card').forEach(card => {
+                    card.classList.toggle('hidden', !card.dataset.text.toLowerCase().includes(term));
+                });
+            });
+        }
+    </script>
+</body>
+</html>
+
