@@ -457,6 +457,24 @@
         ['mousemove', 'keydown', 'touchstart'].forEach(evt => document.addEventListener(evt, resetIdleTimer));
         document.addEventListener('visibilitychange', () => { if(document.hidden) lockApp(); });
 
+        const loadCategories = () => {
+            if (AppState.unsubs.categories) AppState.unsubs.categories();
+            AppState.unsubs.categories = onSnapshot(collection(db, COLL_CATS()), 
+                (snap) => processAndRender(snap, true, DOM.grids.cats, DOM.grids.catsTrash, DOM.dividers.cats),
+                (err) => console.error("Categories Load Error:", err)
+            );
+        };
+
+        const loadNotes = (catId) => {
+            DOM.search.value = '';
+            if (AppState.unsubs.notes) AppState.unsubs.notes();
+            const q = query(collection(db, COLL_NOTES()), where("category", "==", catId));
+            AppState.unsubs.notes = onSnapshot(q, 
+                (snap) => processAndRender(snap, false, DOM.grids.notes, DOM.grids.notesTrash, DOM.dividers.notes),
+                (err) => console.error("Notes Load Error:", err)
+            );
+        };
+
         const handleLogin = () => {
             const lockUntil = localStorage.getItem(AppState.lockoutKey);
             if (lockUntil && Date.now() < parseInt(lockUntil)) return; 
@@ -472,7 +490,8 @@
                 document.documentElement.style.setProperty('--accent-secondary', 'var(--neon-blue)');
 
                 DOM.views.login.classList.add('hidden'); DOM.views.app.classList.remove('hidden');
-                if(!AppState.unsubs.categories) { showView('categories'); loadCategories(); }
+                showView('categories'); 
+                loadCategories();
                 resetIdleTimer();
             } else {
                 AppState.loginAttempts++; document.getElementById('pass-input').value = "";
@@ -504,7 +523,7 @@
                 const isTrashed = data.trashed === true;
                 const card = document.createElement('div');
                 card.className = `grid-card ${isCat ? 'cat-card' : 'note-card'} ${isTrashed ? 'trashed-card' : ''}`;
-                card.dataset.id = docSnap.id; 
+                card.dataset.id = data.id; 
                 
                 const customColor = data.color || 'var(--border-glass)';
                 if(isCat) {
@@ -540,24 +559,6 @@
 
             if (activeCount === 0) targetGrid.innerHTML = `<div class="empty-state"><h3>No Active Items Found</h3></div>`;
             dividerElement.classList.toggle('hidden', trashCount === 0);
-        };
-
-        const loadCategories = () => {
-            if (AppState.unsubs.categories) AppState.unsubs.categories();
-            AppState.unsubs.categories = onSnapshot(collection(db, COLL_CATS()), 
-                (snap) => processAndRender(snap, true, DOM.grids.cats, DOM.grids.catsTrash, DOM.dividers.cats),
-                (err) => console.error("Categories Load Error:", err)
-            );
-        };
-
-        const loadNotes = (catId) => {
-            DOM.search.value = '';
-            if (AppState.unsubs.notes) AppState.unsubs.notes();
-            const q = query(collection(db, COLL_NOTES()), where("category", "==", catId));
-            AppState.unsubs.notes = onSnapshot(q, 
-                (snap) => processAndRender(snap, false, DOM.grids.notes, DOM.grids.notesTrash, DOM.dividers.notes),
-                (err) => console.error("Notes Load Error:", err)
-            );
         };
 
         let currentModalAction = null;
@@ -691,7 +692,7 @@
             }; reader.readAsText(file);
         };
 
-        // --- OSINT TARGET MANAGER ---
+        // --- OSINT TARGET MANAGER & CLEAN PARSER ---
         if (typeof window._osintUnsub === 'function') {
             window._osintUnsub();
         }
@@ -813,26 +814,31 @@
                 let parsedId = '';
                 let parsedAddress = '';
 
-                lines.forEach(line => {
+                lines.forEach(rawLine => {
+                    const line = rawLine.replace(/[\u{1F000}-\u{1F6FF}]|[\u{1F900}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[═]/gu, '').trim();
                     const upper = line.toUpperCase();
-                    if ((upper.includes('NAME:') || upper.includes('NAME -')) && !upper.includes('FATHER')) {
+
+                    if ((upper.includes('NAME') || upper.includes('👤')) && !upper.includes('FATHER')) {
                         const parts = line.split(/[:|-]/);
                         if (parts[1]) parsedName = parts.slice(1).join(':').trim();
-                    } else if (upper.includes('MOBILE:') || upper.includes('NUMBER:') || upper.includes('MOBILE -')) {
+                    } else if (upper.includes('MOBILE') || upper.includes('NUMBER') || upper.includes('📞')) {
                         const parts = line.split(/[:|-]/);
                         if (parts[1]) parsedMobile = parts.slice(1).join(':').trim();
-                    } else if (upper.includes('FATHER:') || upper.includes('FATHER -')) {
+                    } else if (upper.includes('FATHER') || upper.includes('👨')) {
                         const parts = line.split(/[:|-]/);
                         if (parts[1]) parsedFather = parts.slice(1).join(':').trim();
-                    } else if (upper.includes('ALTERNATIVE:') || upper.includes('ALT NUMBER:') || upper.includes('ALTERNATIVE -')) {
+                    } else if (upper.includes('ALTERNATIVE') || upper.includes('ALT') || upper.includes('📱')) {
                         const parts = line.split(/[:|-]/);
                         if (parts[1]) parsedAlternative = parts.slice(1).join(':').trim();
-                    } else if (upper.includes('ID:') || upper.includes('ID -')) {
+                    } else if (upper.includes('ID') || upper.includes('🆔')) {
                         const parts = line.split(/[:|-]/);
                         if (parts[1]) parsedId = parts.slice(1).join(':').trim();
-                    } else if (upper.includes('ADDRESS:') || upper.includes('ADDRESS -')) {
+                    } else if (upper.includes('ADDRESS') || upper.includes('📍')) {
                         const parts = line.split(/[:|-]/);
-                        if (parts[1]) parsedAddress = parts.slice(1).join(':').trim();
+                        if (parts[1]) {
+                            parsedAddress = parts.slice(1).join(':').trim();
+                            if (parsedAddress.startsWith(',')) parsedAddress = parsedAddress.substring(1).trim();
+                        }
                     }
                 });
 
@@ -861,6 +867,7 @@
                     await setDoc(doc(db, COLL_OSINT(), docId), structuredData);
                     alert(`OSINT Target "${targetNameInput}" successfully parsed and saved!`);
                     if (modalOverlay) modalOverlay.classList.remove('active');
+                    window.loadOsintTargets();
                 } catch (err) {
                     console.error("OSINT Save Error:", err);
                     alert("Failed to save target to Firebase.");
@@ -868,7 +875,6 @@
             };
         }
 
-        // OSINT Card Actions: Copy & Edit
         document.addEventListener('click', async (e) => {
             const targetCard = e.target.closest('#osint-targets-grid .grid-card');
             const actionBtn = e.target.closest('.card-actions button');
@@ -904,4 +910,3 @@
     </script>
 </body>
 </html>
-
