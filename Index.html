@@ -362,7 +362,6 @@
             vaultPrefix: 'vault_alpha_'
         };
 
-        // RESTORED CORRECT COLLECTION PREFIXES MATCHING YOUR EXISTING DATABASE
         const COLL_CATS = () => AppState.vaultPrefix + "categories";
         const COLL_NOTES = () => AppState.vaultPrefix + "notes";
         const COLL_OSINT = () => AppState.vaultPrefix + "osint_targets";
@@ -505,7 +504,7 @@
                 const isTrashed = data.trashed === true;
                 const card = document.createElement('div');
                 card.className = `grid-card ${isCat ? 'cat-card' : 'note-card'} ${isTrashed ? 'trashed-card' : ''}`;
-                card.dataset.id = data.id; 
+                card.dataset.id = docSnap.id; 
                 
                 const customColor = data.color || 'var(--border-glass)';
                 if(isCat) {
@@ -728,6 +727,7 @@
                         <div class="card-inner" style="--card-color: var(--neon-blue)">
                             <div class="card-actions">
                                 <button class="btn-icon action-copy-target" title="Copy Formatted Text">${SVGS.copy}</button>
+                                <button class="btn-icon action-edit-target" title="Edit Target">${SVGS.edit}</button>
                                 <button class="btn-icon danger action-delete-target" title="Delete Target">${SVGS.trash}</button>
                             </div>
                             <div class="card-content" style="align-items: flex-start; justify-content: flex-start; text-align: left;">
@@ -804,32 +804,49 @@
 
                 const docId = targetNameInput.replace(/[^a-zA-Z0-9-_]/g, "_");
 
-                const extractField = (regex) => {
-                    const matches = [...rawData.matchAll(regex)];
-                    return [...new Set(matches.map(m => m[1].trim()).filter(v => v.length > 0))];
-                };
+                const lines = rawData.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                
+                let parsedName = targetNameInput;
+                let parsedMobile = '';
+                let parsedFather = '';
+                let parsedAlternative = '';
+                let parsedId = '';
+                let parsedAddress = '';
 
-                const names = extractField(/(?:👤\s*NAME:|NAME:)\s*(.*)/gi);
-                const mobiles = extractField(/(?:📞\s*MOBILE:|MOBILE:|NUMBER:)\s*([0-9\s+-]{10,})/gi);
-                const fathers = extractField(/(?:👨\s*FATHER:|FATHER:)\s*(.*)/gi);
-                const alternatives = extractField(/(?:📱\s*ALTERNATIVE:|ALTERNATIVE:)\s*([0-9\s+-]{10,})/gi);
-                const ids = extractField(/(?:🆔\s*ID:|ID:)\s*([0-9]+)/gi);
-                const addresses = extractField(/(?:📍\s*ADDRESS:|ADDRESS:)\s*(.*)/gi);
+                lines.forEach(line => {
+                    const upper = line.toUpperCase();
+                    if ((upper.includes('NAME:') || upper.includes('NAME -')) && !upper.includes('FATHER')) {
+                        const parts = line.split(/[:|-]/);
+                        if (parts[1]) parsedName = parts.slice(1).join(':').trim();
+                    } else if (upper.includes('MOBILE:') || upper.includes('NUMBER:') || upper.includes('MOBILE -')) {
+                        const parts = line.split(/[:|-]/);
+                        if (parts[1]) parsedMobile = parts.slice(1).join(':').trim();
+                    } else if (upper.includes('FATHER:') || upper.includes('FATHER -')) {
+                        const parts = line.split(/[:|-]/);
+                        if (parts[1]) parsedFather = parts.slice(1).join(':').trim();
+                    } else if (upper.includes('ALTERNATIVE:') || upper.includes('ALT NUMBER:') || upper.includes('ALTERNATIVE -')) {
+                        const parts = line.split(/[:|-]/);
+                        if (parts[1]) parsedAlternative = parts.slice(1).join(':').trim();
+                    } else if (upper.includes('ID:') || upper.includes('ID -')) {
+                        const parts = line.split(/[:|-]/);
+                        if (parts[1]) parsedId = parts.slice(1).join(':').trim();
+                    } else if (upper.includes('ADDRESS:') || upper.includes('ADDRESS -')) {
+                        const parts = line.split(/[:|-]/);
+                        if (parts[1]) parsedAddress = parts.slice(1).join(':').trim();
+                    }
+                });
 
-                const finalName = names[0] || targetNameInput;
-                const finalMobile = mobiles[0] || '';
-                const finalFather = fathers[0] || '';
-                const finalAlternative = alternatives.filter(num => num !== finalMobile)[0] || '';
-                const finalId = ids[0] || '';
-                const finalAddress = addresses[0] || '';
+                if (parsedMobile === parsedAlternative) {
+                    parsedAlternative = '';
+                }
 
                 let cleanLines = [];
-                cleanLines.push(`NAME: ${finalName}`);
-                if (finalMobile) cleanLines.push(`MOBILE: ${finalMobile}`);
-                if (finalFather) cleanLines.push(`FATHER: ${finalFather}`);
-                if (finalAlternative) cleanLines.push(`ALTERNATE NUMBER: ${finalAlternative}`);
-                if (finalId) cleanLines.push(`ID: ${finalId}`);
-                if (finalAddress) cleanLines.push(`ADDRESS: ${finalAddress}`);
+                cleanLines.push(`NAME: ${parsedName}`);
+                if (parsedMobile) cleanLines.push(`MOBILE: ${parsedMobile}`);
+                if (parsedFather) cleanLines.push(`FATHER: ${parsedFather}`);
+                if (parsedAlternative) cleanLines.push(`ALTERNATE NUMBER: ${parsedAlternative}`);
+                if (parsedId) cleanLines.push(`ID: ${parsedId}`);
+                if (parsedAddress) cleanLines.push(`ADDRESS: ${parsedAddress}`);
 
                 const formattedCleanText = cleanLines.join('\n');
 
@@ -851,6 +868,7 @@
             };
         }
 
+        // OSINT Card Actions: Copy & Edit
         document.addEventListener('click', async (e) => {
             const targetCard = e.target.closest('#osint-targets-grid .grid-card');
             const actionBtn = e.target.closest('.card-actions button');
@@ -858,9 +876,15 @@
             if (targetCard && actionBtn) {
                 const id = targetCard.dataset.id;
                 const ref = doc(db, COLL_OSINT(), id);
+                const currentText = targetCard.dataset.text;
 
                 if (actionBtn.classList.contains('action-copy-target')) {
-                    fallbackCopy(targetCard.dataset.text, actionBtn);
+                    fallbackCopy(currentText, actionBtn);
+                }
+                if (actionBtn.classList.contains('action-edit-target')) {
+                    openModal("EDIT OSINT TARGET", "textarea", currentText, false, async (newVal) => {
+                        await updateDoc(ref, { cleanText: newVal });
+                    });
                 }
                 if (actionBtn.classList.contains('action-delete-target') && confirm("Permanently delete this OSINT target?")) {
                     await deleteDoc(ref);
