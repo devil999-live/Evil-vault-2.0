@@ -3,197 +3,1161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evil Vault | Secure Storage & OSINT</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <title>Evil Vault | OSINT & Secure</title>
+    
+    <!-- Google Fonts: Inter, Orbitron, Share Tech Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <!-- External Tactical Libraries (CDN) -->
+    <!-- Lucide Vector Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- DOMPurify for XSS Sanitization -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
+    <!-- Fuse.js for Fuzzy Intelligence Search -->
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
+    <!-- Vis-Network for Interactive OSINT Target Link Analysis Graph -->
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <!-- Chart.js for Threat Matrix & Telemetry Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         /* ==========================================================================
-           CSS VARIABLES (DARK NEON & LIGHT CORPORATE MODES)
+           1. CORE DESIGN TOKENS & CYBERPUNK / CORPORATE THEME VARIABLES
            ========================================================================== */
         :root {
-            --bg-base: #070005; 
-            --bg-surface: rgba(20, 5, 15, 0.7);
-            --bg-card: linear-gradient(145deg, rgba(30, 10, 20, 0.8), rgba(15, 5, 10, 0.9));
-            --text-main: #f0f4f8;
+            --bg-base: #050004;
+            --bg-surface: rgba(18, 4, 14, 0.78);
+            --bg-surface-solid: #12040e;
+            --bg-card: linear-gradient(145deg, rgba(28, 8, 20, 0.88), rgba(10, 3, 8, 0.95));
+            --bg-input: rgba(255, 255, 255, 0.05);
+            
+            --text-main: #f0f6fc;
             --text-muted: #8b949e;
+            --text-mono: #00e5ff;
             
             --neon-red: #ff003c;
             --neon-blue: #00e5ff;
             --neon-orange: #ffaa00;
+            --neon-green: #00ff66;
+            --neon-purple: #b026ff;
+            --neon-yellow: #fcee09;
             
             --accent-primary: var(--neon-red);
             --accent-secondary: var(--neon-blue);
             
-            --border-glass: rgba(255, 255, 255, 0.1);
-            --shadow-depth: 0 20px 40px rgba(0, 0, 0, 0.8);
+            --border-glass: rgba(255, 255, 255, 0.12);
+            --border-highlight: rgba(0, 229, 255, 0.4);
+            --shadow-depth: 0 20px 50px rgba(0, 0, 0, 0.85);
             --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-display: 'Orbitron', sans-serif;
+            --font-mono: 'Share Tech Mono', monospace;
         }
 
         body.light-mode {
-            --bg-base: #f0f2f5;
-            --bg-surface: rgba(255, 255, 255, 0.8);
-            --bg-card: linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(245, 247, 250, 1));
-            --text-main: #111827;
-            --text-muted: #6b7280;
-            --border-glass: rgba(0, 0, 0, 0.1);
-            --shadow-depth: 0 10px 30px rgba(0, 0, 0, 0.1);
-            --accent-primary: #d90429;
-            --accent-secondary: #0077b6;
+            --bg-base: #eef2f6;
+            --bg-surface: rgba(255, 255, 255, 0.88);
+            --bg-surface-solid: #ffffff;
+            --bg-card: linear-gradient(145deg, #ffffff, #f8fafc);
+            --bg-input: rgba(15, 23, 42, 0.05);
+            
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --text-mono: #0284c7;
+            
+            --border-glass: rgba(15, 23, 42, 0.12);
+            --border-highlight: rgba(2, 132, 199, 0.4);
+            --shadow-depth: 0 12px 32px rgba(15, 23, 42, 0.08);
+            
+            --accent-primary: #e11d48;
+            --accent-secondary: #0284c7;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        /* ==========================================================================
+           2. GLOBAL RESET, SCROLLBARS & BACKGROUND EFFECTS
+           ========================================================================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-base);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-glass);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-secondary);
+        }
 
         body {
-            font-family: 'Inter', sans-serif; background-color: var(--bg-base);
-            color: var(--text-main); min-height: 100vh; overflow-x: hidden;
-            display: flex; flex-direction: column; transition: background-color 0.4s ease;
+            font-family: var(--font-sans);
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.4s ease, color 0.3s ease;
+            position: relative;
         }
+
         body:not(.light-mode) {
-            background-image: radial-gradient(circle at 15% 20%, rgba(255, 0, 60, 0.05) 0%, transparent 40%),
-                              radial-gradient(circle at 85% 80%, rgba(0, 229, 255, 0.05) 0%, transparent 40%);
+            background-image: 
+                radial-gradient(circle at 12% 18%, rgba(255, 0, 60, 0.08) 0%, transparent 42%),
+                radial-gradient(circle at 88% 82%, rgba(0, 229, 255, 0.08) 0%, transparent 42%),
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
             background-attachment: fixed;
         }
 
-        input, textarea, select, .selectable { user-select: text; }
-        h1, h2, h3 { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
-        .hidden { display: none !important; }
-        
-        .glass-panel {
-            background: var(--bg-surface); backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid var(--border-glass); border-radius: 16px; box-shadow: var(--shadow-depth);
-            transition: var(--transition-smooth);
+        /* Matrix Digital Rain Canvas */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.18;
+            transition: opacity 0.5s ease;
+        }
+        #matrix-canvas.hidden {
+            display: none !important;
         }
 
-        body:not(.light-mode) .neon-text-red { color: #fff; text-shadow: 0 0 5px #fff, 0 0 20px var(--neon-red); }
-        .dynamic-theme-text { color: var(--accent-secondary); transition: var(--transition-smooth); }
-        body:not(.light-mode) .dynamic-theme-text { text-shadow: 0 0 5px #fff, 0 0 20px var(--accent-secondary); }
+        /* CRT Scanline & Tactical Vignette Overlay */
+        body.crt-active::after {
+            content: " ";
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: 
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.28) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.015), rgba(0, 0, 255, 0.04));
+            z-index: 9990;
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+            box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.65);
+        }
+
+        input, textarea, select, .selectable {
+            user-select: text;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: var(--font-display);
+            letter-spacing: 1.2px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* ==========================================================================
+           3. GLASSMORPHISM PANELS, TYPOGRAPHY & BUTTONS
+           ========================================================================== */
+        .glass-panel {
+            background: var(--bg-surface);
+            backdrop-filter: blur(22px) saturate(180%);
+            -webkit-backdrop-filter: blur(22px) saturate(180%);
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            box-shadow: var(--shadow-depth);
+            transition: var(--transition-smooth);
+            position: relative;
+        }
+
+        /* Tactical HUD Corner Brackets on Major Panels */
+        .hud-corners::before,
+        .hud-corners::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-color: var(--accent-secondary);
+            border-style: solid;
+            pointer-events: none;
+            opacity: 0.6;
+            transition: var(--transition-smooth);
+        }
+        .hud-corners::before {
+            top: -1px;
+            left: -1px;
+            border-width: 2px 0 0 2px;
+            border-top-left-radius: 6px;
+        }
+        .hud-corners::after {
+            bottom: -1px;
+            right: -1px;
+            border-width: 0 2px 2px 0;
+            border-bottom-right-radius: 6px;
+        }
+
+        body:not(.light-mode) .neon-text-red {
+            color: #fff;
+            text-shadow: 0 0 6px rgba(255, 255, 255, 0.8), 0 0 18px var(--neon-red);
+        }
+
+        .dynamic-theme-text {
+            color: var(--accent-secondary);
+            transition: var(--transition-smooth);
+        }
+        body:not(.light-mode) .dynamic-theme-text {
+            text-shadow: 0 0 6px rgba(255, 255, 255, 0.5), 0 0 18px var(--accent-secondary);
+        }
 
         button, select {
-            font-family: 'Inter', sans-serif; cursor: pointer; border: none; outline: none; 
-            background: transparent; color: var(--text-main); transition: var(--transition-smooth);
+            font-family: var(--font-sans);
+            cursor: pointer;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: var(--text-main);
+            transition: var(--transition-smooth);
         }
 
         .btn-primary {
-            background: rgba(128, 128, 128, 0.1); border: 1px solid var(--accent-primary); color: var(--text-main);
-            padding: 10px 20px; border-radius: 8px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+            background: rgba(255, 0, 60, 0.1);
+            border: 1px solid var(--accent-primary);
+            color: var(--text-main);
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
-        body:not(.light-mode) .btn-primary { box-shadow: 0 0 15px rgba(255, 0, 60, 0.2); }
-        .btn-primary:hover:not(:disabled) { background: var(--accent-primary); color: #fff; transform: translateY(-2px); }
+        body:not(.light-mode) .btn-primary {
+            box-shadow: 0 0 15px rgba(255, 0, 60, 0.2);
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-primary);
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 0 22px var(--accent-primary);
+        }
 
         .btn-theme {
-            background: rgba(128, 128, 128, 0.1); border: 1px solid var(--accent-secondary); color: var(--text-main);
-            padding: 10px 20px; border-radius: 8px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
-            transition: var(--transition-smooth);
+            background: rgba(0, 229, 255, 0.08);
+            border: 1px solid var(--accent-secondary);
+            color: var(--text-main);
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
-        body:not(.light-mode) .btn-theme { box-shadow: 0 0 10px var(--accent-secondary); }
-        .btn-theme:hover:not(:disabled) { background: var(--accent-secondary); color: #000; transform: translateY(-2px); box-shadow: 0 0 20px var(--accent-secondary); }
+        body:not(.light-mode) .btn-theme {
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+        }
+        .btn-theme:hover:not(:disabled) {
+            background: var(--accent-secondary);
+            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 0 22px var(--accent-secondary);
+        }
 
         .btn-icon {
-            padding: 8px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
-            background: rgba(128,128,128,0.1); border: 1px solid var(--border-glass); color: var(--text-muted);
+            padding: 8px 10px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-glass);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
         }
-        .btn-icon:hover { color: var(--text-main); border-color: var(--accent-secondary); transform: scale(1.05); }
+        .btn-icon:hover {
+            color: var(--text-main);
+            border-color: var(--accent-secondary);
+            background: rgba(0, 229, 255, 0.12);
+            transform: translateY(-1px);
+        }
+        .btn-icon.active-toggle {
+            color: var(--neon-green);
+            border-color: var(--neon-green);
+            background: rgba(0, 255, 102, 0.12);
+        }
+        .btn-icon.danger:hover {
+            color: #fff;
+            background: var(--neon-red);
+            border-color: var(--neon-red);
+        }
 
         input[type="text"], input[type="password"], textarea, select {
-            width: 100%; background: rgba(128, 128, 128, 0.1); border: 1px solid var(--border-glass); 
-            color: var(--text-main); padding: 12px 16px; border-radius: 8px; font-size: 1rem;
-            font-family: 'Inter', sans-serif; transition: var(--transition-smooth);
-        }
-        input:focus, textarea:focus, select:focus { border-color: var(--accent-secondary); outline: none; }
-
-        #app-container { width: 100%; max-width: 1400px; margin: 0 auto; padding: 24px; flex-grow: 1; display: flex; flex-direction: column; }
-
-        #login-view { justify-content: center; align-items: center; height: 100vh; padding: 0; margin: 0; display: flex; flex-direction: column; z-index: 9999; }
-        .login-box { width: 100%; max-width: 400px; padding: 40px; text-align: center; border-color: var(--accent-primary); }
-        .vault-logo { font-size: 3rem; margin-bottom: 10px; color: var(--accent-primary); }
-        .login-title { font-size: 2rem; margin-bottom: 5px; font-weight: 900; letter-spacing: 2px; }
-        #pass-input { text-align: center; font-size: 1.5rem; letter-spacing: 5px; font-family: 'Orbitron'; color: var(--neon-blue); margin-bottom: 20px;}
-
-        .dash-header {
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
-            padding: 20px; margin-bottom: 25px; border-radius: 12px; position: sticky; top: 20px; z-index: 10;
-        }
-        .header-left { display: flex; align-items: center; gap: 15px; }
-        .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .controls-row { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
-
-        #categories-view .dash-header { border-bottom: 2px solid var(--accent-primary); }
-        #notes-view .dash-header, #full-note-view .dash-header { border-bottom: 2px solid var(--accent-secondary); transition: var(--transition-smooth); }
-
-        .dashboard-grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); transition: all 0.3s; }
-        .dashboard-grid.list-view { grid-template-columns: 1fr; }
-        .dashboard-grid.list-view .grid-card { height: auto; min-height: 80px; }
-        .dashboard-grid.list-view .card-inner { flex-direction: row; align-items: center; padding: 15px 20px; }
-        .dashboard-grid.list-view .card-content { text-align: left; padding-top: 0; justify-content: flex-start; margin-right: 150px; }
-        .dashboard-grid.list-view .card-actions { top: 50%; transform: translateY(-50%) translateZ(0); }
-
-        .grid-card { perspective: 1000px; height: auto; min-height: 180px; cursor: pointer; position: relative; }
-        .card-inner {
-            width: 100%; height: 100%; background: var(--bg-card);
-            border: 1px solid var(--border-glass); border-radius: 16px; padding: 20px;
-            display: flex; flex-direction: column; transform-style: preserve-3d;
-            transition: transform 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
-            box-shadow: var(--shadow-depth); position: relative;
-        }
-        
-        .grid-card:hover .card-inner {
-            transform: translateY(-5px) rotateX(2deg) rotateY(-2deg);
-            border-color: var(--card-color, var(--border-glass));
-        }
-        body:not(.light-mode) .grid-card:hover .card-inner { box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 15px var(--card-color, transparent); }
-
-        .card-inner.is-pinned { border-top: 3px solid var(--neon-orange); }
-        .card-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; z-index: 5; transform: translateZ(30px); }
-        .card-actions .btn-icon { padding: 6px; background: rgba(128,128,128,0.2); }
-        
-        .card-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; text-align: center; padding-top: 20px; }
-        .cat-card .card-content h3 { font-size: 1.1rem; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-
-        .note-card { height: auto; min-height: 180px; }
-        .note-card .card-content { align-items: flex-start; justify-content: flex-start; text-align: left; }
-        .note-card .card-content p { font-size: 0.9rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-
-        .timestamp { position: relative; margin-top: 15px; font-size: 0.7rem; color: var(--text-muted); font-family: monospace; }
-
-        .trash-divider { grid-column: 1 / -1; margin-top: 40px; margin-bottom: 20px; border-top: 1px dashed var(--border-glass); text-align: center; }
-        .trash-divider span { background: var(--bg-base); padding: 0 15px; color: var(--text-muted); font-size: 0.85rem; position: relative; top: -10px; text-transform: uppercase; }
-        .trashed-card .card-inner { opacity: 0.6; filter: grayscale(80%); border-style: dashed; }
-
-        #full-note-view .full-note-content { 
-            padding: 40px; min-height: 50vh; font-size: 1.1rem; line-height: 1.8; 
-            white-space: pre-wrap; word-wrap: break-word; border-top: 3px solid var(--accent-secondary); 
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-glass);
+            color: var(--text-main);
+            padding: 11px 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: var(--font-sans);
             transition: var(--transition-smooth);
         }
-
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85);
-            display: flex; align-items: center; justify-content: center; z-index: 1000;
-            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        select option {
+            background: var(--bg-surface-solid);
+            color: var(--text-main);
         }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-card { width: 100%; max-width: 500px; padding: 30px; transform: translateY(30px) scale(0.95); transition: transform 0.4s; }
-        .modal-overlay.active .modal-card { transform: translateY(0) scale(1); }
-        .modal-body textarea { min-height: 150px; resize: vertical; margin-bottom: 15px; }
-        
-        .color-picker { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; justify-content: center; }
-        .color-dot { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
-        .color-dot.selected { border-color: #fff; transform: scale(1.2); box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--accent-secondary);
+            box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.15);
+            outline: none;
+        }
 
-        svg { width: 16px; height: 16px; fill: currentColor; }
+        svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+            flex-shrink: 0;
+        }
+        .lucide {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2;
+        }
+
+        /* ==========================================================================
+           4. LOGIN VIEW & TACTICAL TELEMETRY CLOCK
+           ========================================================================== */
+        #login-view {
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            z-index: 2000;
+            position: relative;
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 430px;
+            padding: 40px 36px;
+            text-align: center;
+            border-color: rgba(255, 0, 60, 0.45);
+        }
+
+        .vault-logo-ring {
+            width: 76px;
+            height: 76px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            border: 2px dashed var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            box-shadow: 0 0 25px rgba(255, 0, 60, 0.25);
+            animation: pulseRotate 12s linear infinite;
+        }
+
+        @keyframes pulseRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .login-title {
+            font-size: 2rem;
+            margin-bottom: 4px;
+            font-weight: 900;
+            letter-spacing: 3px;
+        }
+
+        .login-clock-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 12px;
+            margin: 12px 0 18px;
+            background: rgba(0, 229, 255, 0.07);
+            border: 1px solid rgba(0, 229, 255, 0.25);
+            border-radius: 20px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--neon-blue);
+        }
+
+        #pass-input {
+            text-align: center;
+            font-size: 1.75rem;
+            letter-spacing: 10px;
+            font-family: var(--font-display);
+            color: var(--neon-blue);
+            margin-bottom: 18px;
+            padding: 12px;
+        }
+
+        .login-hint-footer {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px dashed var(--border-glass);
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* ==========================================================================
+           5. MAIN APP CONTAINER, HEADER & KPI TELEMETRY BAR
+           ========================================================================== */
+        #app-container {
+            width: 100%;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 20px 24px 90px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            z-index: 5;
+            position: relative;
+        }
+
+        /* Top Tactical Telemetry Strip */
+        .telemetry-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .telemetry-card {
+            padding: 12px 16px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-left: 3px solid var(--accent-secondary);
+        }
+        .telemetry-card.alert-mode {
+            border-left-color: var(--neon-orange);
+        }
+        .telemetry-label {
+            font-size: 0.7rem;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .telemetry-val {
+            font-size: 1.25rem;
+            font-family: var(--font-display);
+            font-weight: 700;
+            color: var(--text-main);
+            margin-top: 2px;
+        }
+
+        .dash-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            padding: 16px 22px;
+            margin-bottom: 22px;
+            border-radius: 12px;
+            position: sticky;
+            top: 14px;
+            z-index: 50;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* Quick Filter Pills */
+        .filter-pills {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .filter-pill {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-family: var(--font-mono);
+            border: 1px solid var(--border-glass);
+            background: var(--bg-input);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+        .filter-pill:hover, .filter-pill.active {
+            border-color: var(--accent-secondary);
+            color: var(--accent-secondary);
+            background: rgba(0, 229, 255, 0.1);
+        }
+
+        #categories-view .dash-header {
+            border-bottom: 2px solid var(--accent-primary);
+        }
+        #notes-view .dash-header, #full-note-view .dash-header {
+            border-bottom: 2px solid var(--accent-secondary);
+        }
+
+        /* ==========================================================================
+           6. DASHBOARD GRIDS, 3D CARDS & IOC BADGES
+           ========================================================================== */
+        .dashboard-grid {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            transition: all 0.3s ease;
+        }
+        .dashboard-grid.list-view {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        .dashboard-grid.list-view .grid-card {
+            min-height: 78px;
+        }
+        .dashboard-grid.list-view .card-inner {
+            flex-direction: row;
+            align-items: center;
+            padding: 14px 20px;
+            gap: 20px;
+        }
+        .dashboard-grid.list-view .card-content {
+            text-align: left;
+            padding-top: 0;
+            justify-content: flex-start;
+            margin-right: 170px;
+        }
+        .dashboard-grid.list-view .card-actions {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .dashboard-grid.list-view .timestamp {
+            margin-top: 0;
+            margin-left: auto;
+            padding-right: 175px;
+            white-space: nowrap;
+        }
+
+        .grid-card {
+            perspective: 1000px;
+            height: auto;
+            min-height: 190px;
+            cursor: pointer;
+            position: relative;
+            animation: cardFadeIn 0.35s ease forwards;
+        }
+
+        @keyframes cardFadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-inner {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            transform-style: preserve-3d;
+            transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+            box-shadow: var(--shadow-depth);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .grid-card:hover .card-inner {
+            transform: translateY(-4px) rotateX(1.5deg) rotateY(-1.5deg);
+            border-color: var(--card-color, var(--accent-secondary));
+        }
+        body:not(.light-mode) .grid-card:hover .card-inner {
+            box-shadow: 0 18px 36px rgba(0, 0, 0, 0.85), 0 0 16px var(--card-color, rgba(0, 229, 255, 0.25));
+        }
+
+        .card-inner.is-pinned {
+            border-top: 3px solid var(--neon-orange);
+        }
+
+        .card-actions {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 5px;
+            z-index: 5;
+        }
+        .card-actions .btn-icon {
+            padding: 6px;
+            background: rgba(128, 128, 128, 0.16);
+        }
+
+        .card-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding-top: 24px;
+        }
+        .cat-card .card-content h3 {
+            font-size: 1.15rem;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .note-card .card-content {
+            align-items: flex-start;
+            justify-content: flex-start;
+            text-align: left;
+        }
+        .note-card .card-content p {
+            font-size: 0.88rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 6;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        /* IOC & Threat Badges on Cards */
+        .badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 12px;
+            width: 100%;
+        }
+        .intel-badge {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            padding: 2px 7px;
+            border-radius: 4px;
+            background: rgba(0, 229, 255, 0.1);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            color: var(--neon-blue);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .intel-badge.risk-CRITICAL {
+            background: rgba(255, 0, 60, 0.18);
+            border-color: var(--neon-red);
+            color: var(--neon-red);
+        }
+        .intel-badge.risk-HIGH {
+            background: rgba(255, 170, 0, 0.18);
+            border-color: var(--neon-orange);
+            color: var(--neon-orange);
+        }
+        .intel-badge.risk-MEDIUM {
+            background: rgba(0, 229, 255, 0.15);
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+        }
+        .intel-badge.risk-LOW {
+            background: rgba(0, 255, 102, 0.15);
+            border-color: var(--neon-green);
+            color: var(--neon-green);
+        }
+
+        .card-footer-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            width: 100%;
+        }
+        .timestamp {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 50px 20px;
+            border: 1px dashed var(--border-glass);
+            border-radius: 14px;
+            color: var(--text-muted);
+        }
+
+        .trash-divider {
+            grid-column: 1 / -1;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-top: 1px dashed var(--border-glass);
+            text-align: center;
+        }
+        .trash-divider span {
+            background: var(--bg-base);
+            padding: 0 15px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+            position: relative;
+            top: -10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .trashed-card .card-inner {
+            opacity: 0.55;
+            filter: grayscale(80%);
+            border-style: dashed;
+        }
+
+        /* ==========================================================================
+           7. FULL NOTE VIEW & IOC ENTITY HIGHLIGHTING
+           ========================================================================== */
+        #full-note-view .full-note-layout {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 20px;
+        }
+        @media (max-width: 960px) {
+            #full-note-view .full-note-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        #full-note-view .full-note-content {
+            padding: 32px;
+            min-height: 55vh;
+            font-size: 1.02rem;
+            line-height: 1.75;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            border-top: 3px solid var(--accent-secondary);
+            font-family: var(--font-mono);
+        }
+        .ioc-sidebar {
+            padding: 20px;
+            border-top: 3px solid var(--neon-orange);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            height: fit-content;
+        }
+        .ioc-highlight {
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            background: rgba(0, 229, 255, 0.15);
+            border: 1px solid rgba(0, 229, 255, 0.4);
+            color: var(--neon-blue);
+        }
+
+        /* ==========================================================================
+           8. OSINT GRAPH VIEW (VIS-NETWORK) & ANALYTICS VIEW (CHART.JS)
+           ========================================================================== */
+        #osint-graph-container {
+            width: 100%;
+            height: 560px;
+            border-radius: 14px;
+            border: 1px solid var(--border-highlight);
+            background: radial-gradient(circle at center, rgba(0, 229, 255, 0.05) 0%, rgba(5, 0, 4, 0.9) 100%);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+        .graph-legend {
+            position: absolute;
+            bottom: 14px;
+            left: 14px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            background: rgba(10, 5, 12, 0.85);
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-glass);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            z-index: 10;
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        #osint-analytics-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .chart-box {
+            padding: 22px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ==========================================================================
+           9. TERMINAL CLI DRAWER & LIVE AUDIT STATUS BAR
+           ========================================================================== */
+        #terminal-drawer {
+            position: fixed;
+            bottom: 34px;
+            left: 0;
+            right: 0;
+            height: 310px;
+            background: rgba(8, 2, 8, 0.96);
+            backdrop-filter: blur(20px);
+            border-top: 2px solid var(--neon-green);
+            z-index: 1500;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.9);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #terminal-drawer.closed {
+            transform: translateY(110%);
+        }
+        .term-header {
+            padding: 8px 20px;
+            background: rgba(0, 255, 102, 0.08);
+            border-bottom: 1px solid rgba(0, 255, 102, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--neon-green);
+        }
+        #term-output {
+            flex-grow: 1;
+            padding: 14px 20px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #d1fae5;
+            user-select: text;
+        }
+        .term-line {
+            margin-bottom: 4px;
+            word-break: break-all;
+        }
+        .term-input-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .term-prompt {
+            font-family: var(--font-mono);
+            color: var(--neon-green);
+            margin-right: 10px;
+            font-size: 0.9rem;
+        }
+        #term-input {
+            background: transparent;
+            border: none;
+            color: var(--neon-green);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            padding: 4px 0;
+            width: 100%;
+            box-shadow: none;
+        }
+
+        /* Live Security Audit Ticker Bar */
+        #status-ticker-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 34px;
+            background: var(--bg-surface-solid);
+            border-top: 1px solid var(--border-glass);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-family: var(--font-mono);
+            font-size: 0.74rem;
+            color: var(--text-muted);
+            z-index: 1600;
+        }
+        .ticker-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--neon-green);
+            box-shadow: 0 0 8px var(--neon-green);
+            animation: blinkDot 2s infinite;
+        }
+        @keyframes blinkDot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* ==========================================================================
+           10. MODALS, CYBER-DECK CIPHER TOOL & TACTICAL TOASTS
+           ========================================================================== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            padding: 16px;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-card {
+            width: 100%;
+            max-width: 540px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 28px;
+            transform: translateY(25px) scale(0.96);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-overlay.active .modal-card {
+            transform: translateY(0) scale(1);
+        }
+        .modal-body textarea {
+            min-height: 150px;
+            resize: vertical;
+            margin-bottom: 12px;
+            font-family: var(--font-mono);
+        }
+
+        .color-picker {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+        .color-dot {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: 0.2s;
+        }
+        .color-dot.selected {
+            border-color: #fff;
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+        }
+
+        /* Toast Notifications Container */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .tactical-toast {
+            min-width: 280px;
+            max-width: 380px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            background: rgba(14, 4, 12, 0.95);
+            border: 1px solid var(--border-glass);
+            border-left: 4px solid var(--neon-blue);
+            color: #fff;
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            pointer-events: auto;
+            animation: toastSlideIn 0.3s ease forwards;
+        }
+        .tactical-toast.toast-error {
+            border-left-color: var(--neon-red);
+        }
+        .tactical-toast.toast-success {
+            border-left-color: var(--neon-green);
+        }
+        .tactical-toast.toast-warn {
+            border-left-color: var(--neon-orange);
+        }
+        @keyframes toastSlideIn {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* ==========================================================================
+           11. DURESS / PANIC CORPORATE SPREADSHEET CAMOUFLAGE
+           ========================================================================== */
+        #panic-screen {
+            position: fixed;
+            inset: 0;
+            background: #ffffff;
+            color: #1e293b;
+            z-index: 10000;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 24px 32px;
+            overflow-y: auto;
+        }
+        .corp-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.85rem;
+        }
+        .corp-table th, .corp-table td {
+            border: 1px solid #cbd5e1;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .corp-table th {
+            background: #f1f5f9;
+            font-weight: 600;
+        }
+        .corp-table tr:nth-child(even) {
+            background: #f8fafc;
+        }
     </style>
 </head>
-<body>
+<body class="crt-active">
+
+    <!-- MATRIX DIGITAL RAIN BACKGROUND CANVAS -->
+    <canvas id="matrix-canvas"></canvas>
+
+    <!-- TACTICAL TOAST NOTIFICATION CONTAINER (Replaces alert()) -->
+    <div id="toast-container"></div>
+
+    <!-- DURESS / PANIC SCREEN (Triggered via ESC x3 or Panic Button) -->
+    <div id="panic-screen" class="hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px;">
+            <div>
+                <h2 style="font-family: sans-serif; color: #0f172a; font-size: 1.35rem;">Q4 Regional Cloud Infrastructure & ERP Latency Audit</h2>
+                <p style="color: #64748b; font-size: 0.82rem;">Internal Operations Compliance Sheet — Standard Read-Only View</p>
+            </div>
+            <span id="panic-exit-trigger" title="Double-click to restore session" style="font-size: 0.78rem; color: #94a3b8; cursor: pointer; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 4px;">Build v4.12.8-prod</span>
+        </div>
+        <table class="corp-table">
+            <thead>
+                <tr>
+                    <th>Region Cluster</th>
+                    <th>Node ID</th>
+                    <th>Uptime (%)</th>
+                    <th>P95 Latency (ms)</th>
+                    <th>Quarterly Budget Variance</th>
+                    <th>Compliance Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>US-East-1 (N. Virginia)</td><td>aws-ec2-prod-091</td><td>99.98%</td><td>42.1 ms</td><td>-$1,240.00</td><td>Verified</td></tr>
+                <tr><td>EU-Central-1 (Frankfurt)</td><td>aws-ec2-prod-114</td><td>99.95%</td><td>68.4 ms</td><td>+$310.50</td><td>Verified</td></tr>
+                <tr><td>AP-South-1 (Mumbai)</td><td>aws-ec2-prod-208</td><td>99.99%</td><td>28.9 ms</td><td>-$890.00</td><td>Verified</td></tr>
+                <tr><td>US-West-2 (Oregon)</td><td>aws-ec2-backup-04</td><td>99.91%</td><td>81.2 ms</td><td>+$125.00</td><td>Pending Review</td></tr>
+                <tr><td>AP-Northeast-1 (Tokyo)</td><td>aws-ec2-prod-319</td><td>99.97%</td><td>54.0 ms</td><td>-$410.20</td><td>Verified</td></tr>
+                <tr><td>SA-East-1 (Sao Paulo)</td><td>aws-ec2-edge-012</td><td>99.89%</td><td>112.5 ms</td><td>+$640.00</td><td>Scheduled Maintenance</td></tr>
+            </tbody>
+        </table>
+    </div>
 
     <!-- LOGIN SCREEN -->
     <div id="login-view">
-        <div class="glass-panel login-box">
-            <div class="vault-logo">🛡️</div>
+        <div class="glass-panel hud-corners login-box">
+            <div class="vault-logo-ring">🛡️</div>
             <h1 class="login-title neon-text-red">EVIL VAULT</h1>
-            <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.8rem; letter-spacing: 2px;">RESTRICTED ACCESS</p>
-            <div id="login-status" style="color: var(--accent-primary); font-size: 0.85rem; margin-bottom: 10px; min-height: 20px;"></div>
+            <p style="color: var(--text-muted); font-size: 0.78rem; letter-spacing: 2.5px; font-family: var(--font-mono);">RESTRICTED OSINT ENCLAVE // LEVEL-4</p>
+            
+            <div class="login-clock-bar" title="System Time Sync (Master Auth: HHMM | Decoy Auth: MMHH)">
+                <span>⏱️ SYNC:</span>
+                <span id="login-live-clock">--:--:--</span>
+            </div>
+
+            <div id="login-status" style="color: var(--accent-primary); font-family: var(--font-mono); font-size: 0.85rem; margin-bottom: 12px; min-height: 20px;"></div>
+            
             <div class="pass-input-container">
                 <input type="password" id="pass-input" placeholder="••••" maxlength="4" autocomplete="off">
             </div>
-            <button id="btn-unlock" class="btn-primary" style="width: 100%;">DECRYPT SYSTEM</button>
+            
+            <button id="btn-unlock" class="btn-primary" style="width: 100%; padding: 12px;">
+                🔓 DECRYPT SYSTEM
+            </button>
+
+            <div class="login-hint-footer">
+                <span>PROTOCOL: TIME-SYNC HEX</span>
+                <span id="lockout-timer-display">STATUS: READY</span>
+            </div>
         </div>
     </div>
 
@@ -201,27 +1165,75 @@
     <div id="app-container" class="hidden">
         <input type="file" id="import-file-input" accept=".json" style="display: none;">
 
-        <!-- CATEGORIES VIEW -->
+        <!-- GLOBAL TACTICAL TELEMETRY STRIP -->
+        <div class="telemetry-strip">
+            <div class="glass-panel telemetry-card">
+                <div>
+                    <div class="telemetry-label">ACTIVE COLLECTIONS</div>
+                    <div class="telemetry-val" id="stat-total-cats">0</div>
+                </div>
+                <span style="font-size: 1.4rem; opacity: 0.8;">📁</span>
+            </div>
+            <div class="glass-panel telemetry-card">
+                <div>
+                    <div class="telemetry-label">OSINT TARGET DOSSIERS</div>
+                    <div class="telemetry-val" id="stat-total-osint" style="color: var(--neon-blue);">0</div>
+                </div>
+                <span style="font-size: 1.4rem; opacity: 0.8;">🎯</span>
+            </div>
+            <div class="glass-panel telemetry-card">
+                <div>
+                    <div class="telemetry-label">VAULT ENCLAVE MODE</div>
+                    <div class="telemetry-val" id="stat-enclave-mode" style="color: var(--neon-green); font-size: 0.95rem;">ALPHA // MASTER</div>
+                </div>
+                <span style="font-size: 1.4rem; opacity: 0.8;">🔐</span>
+            </div>
+            <div class="glass-panel telemetry-card alert-mode">
+                <div>
+                    <div class="telemetry-label">AUTO-LOCK COUNTDOWN</div>
+                    <div class="telemetry-val" id="stat-idle-timer" style="color: var(--neon-orange);">03:00</div>
+                </div>
+                <span style="font-size: 1.4rem; opacity: 0.8;">⏳</span>
+            </div>
+        </div>
+
+        <!-- ==========================================================================
+             VIEW 1: CATEGORIES (COLLECTIONS) VIEW
+             ========================================================================== -->
         <div id="categories-view" class="view-section">
-            <header class="glass-panel dash-header">
+            <header class="glass-panel hud-corners dash-header">
                 <div class="header-left">
                     <h2 class="header-title neon-text-red">COLLECTIONS</h2>
+                    <span id="decoy-badge" class="intel-badge risk-HIGH hidden">DECOY ENCLAVE ACTIVE</span>
                 </div>
                 <div class="header-actions">
-                    <button id="btn-theme-toggle" class="btn-icon" title="Toggle Day/Night">🌙</button>
-                    <button id="btn-toggle-view" class="btn-icon" title="Toggle Grid/List">☰</button>
-                    <button id="btn-osint" class="btn-primary" style="border-color: var(--neon-blue); color: var(--neon-blue);">+ OSINT</button>
-                    <button id="btn-export" class="btn-icon" title="Export Intel">⬇️</button>
+                    <button id="btn-audio-toggle" class="btn-icon active-toggle" title="Toggle Tactical Audio SFX">🔊 SFX</button>
+                    <button id="btn-matrix-toggle" class="btn-icon active-toggle" title="Toggle Matrix Digital Rain">🌧️ MATRIX</button>
+                    <button id="btn-crt-toggle" class="btn-icon active-toggle" title="Toggle CRT Scanline Overlay">📺 CRT</button>
+                    <button id="btn-cipher-tool" class="btn-icon" title="Open Cyber-Deck Cipher & Hash Toolkit" style="color: var(--neon-orange); border-color: rgba(255,170,0,0.4);">🔐 CYBER-DECK</button>
+                    <button id="btn-cli-toggle" class="btn-icon" title="Toggle Terminal CLI Drawer (`)" style="color: var(--neon-green); border-color: rgba(0,255,102,0.4);">~ CLI</button>
+                    <button id="btn-theme-toggle" class="btn-icon" title="Toggle Day/Night Mode">🌙</button>
+                    <button id="btn-toggle-view" class="btn-icon" title="Toggle Grid/List Layout">☰</button>
+                    <button id="btn-panic-trigger" class="btn-icon danger" title="Duress Panic Screen (ESC x3)">⚠️ PANIC</button>
+                    <button id="btn-osint" class="btn-primary" style="border-color: var(--neon-blue); color: var(--neon-blue); background: rgba(0, 229, 255, 0.1);">🎯 OSINT DB</button>
+                    <button id="btn-export" class="btn-icon" title="Export Encrypted/JSON Intel">⬇️</button>
                     <button id="btn-import" class="btn-icon" title="Import/Merge Intel">⬆️</button>
                     <button id="btn-add-cat" class="btn-primary">+ NEW</button>
                 </div>
             </header>
             
             <div class="controls-row">
-                <select id="sort-cats" style="width: 200px;">
+                <input type="text" id="search-cats-input" placeholder="Fuzzy search collections (Ctrl+K)..." autocomplete="off" style="flex-grow: 1; max-width: 420px;">
+                <select id="sort-cats" style="width: 190px;">
                     <option value="newest">Sort: Newest</option>
                     <option value="oldest">Sort: Oldest</option>
                     <option value="az">Sort: A-Z</option>
+                </select>
+                <select id="idle-timeout-select" style="width: 190px;" title="Configure Session Auto-Lock Timer">
+                    <option value="60">Auto-Lock: 1 Min</option>
+                    <option value="180" selected>Auto-Lock: 3 Min</option>
+                    <option value="300">Auto-Lock: 5 Min</option>
+                    <option value="900">Auto-Lock: 15 Min</option>
                 </select>
             </div>
 
@@ -230,21 +1242,28 @@
             <div id="trashed-categories-grid" class="dashboard-grid"></div>
         </div>
 
-        <!-- NOTES VIEW -->
+        <!-- ==========================================================================
+             VIEW 2: NOTES VIEW (INSIDE A COLLECTION)
+             ========================================================================== -->
         <div id="notes-view" class="view-section hidden">
-            <header class="glass-panel dash-header">
+            <header class="glass-panel hud-corners dash-header">
                 <div class="header-left">
-                    <button id="btn-back-to-cats" class="btn-icon">←</button>
+                    <button id="btn-back-to-cats" class="btn-icon">← BACK</button>
                     <h2 id="active-cat-title" class="header-title dynamic-theme-text">Category Name</h2>
                 </div>
                 <div class="header-actions">
-                    <button id="btn-quick-paste" class="btn-icon" title="Quick Paste from Clipboard">📋</button>
+                    <button id="btn-quick-paste" class="btn-icon" title="Quick Paste from Clipboard">📋 PASTE</button>
                     <button id="btn-add-note" class="btn-theme">+ ADD INTEL</button>
                 </div>
             </header>
             
             <div class="controls-row">
-                <input type="text" id="search-input" placeholder="Search operational intelligence..." autocomplete="off" style="flex-grow: 1;">
+                <input type="text" id="search-input" placeholder="Fuzzy search operational intelligence (or use tag:pinned, has:ip, has:email)..." autocomplete="off" style="flex-grow: 1;">
+                <div class="filter-pills">
+                    <span class="filter-pill active" data-filter="all">ALL</span>
+                    <span class="filter-pill" data-filter="pinned">📌 PINNED</span>
+                    <span class="filter-pill" data-filter="ioc">🔍 HAS IOCs</span>
+                </div>
                 <select id="sort-notes" style="width: 150px;">
                     <option value="newest">Newest</option>
                     <option value="oldest">Oldest</option>
@@ -257,47 +1276,102 @@
             <div id="trashed-notes-grid" class="dashboard-grid"></div>
         </div>
 
-        <!-- FULL NOTE VIEW -->
+        <!-- ==========================================================================
+             VIEW 3: FULL NOTE VIEW & IOC EXTRACTOR SIDEBAR
+             ========================================================================== -->
         <div id="full-note-view" class="view-section hidden">
-            <header class="glass-panel dash-header">
+            <header class="glass-panel hud-corners dash-header">
                 <div class="header-left">
-                    <button id="btn-back-to-notes" class="btn-icon">←</button>
-                    <h2 class="header-title dynamic-theme-text">INTEL DETAILS</h2>
+                    <button id="btn-back-to-notes" class="btn-icon">← BACK</button>
+                    <h2 class="header-title dynamic-theme-text">INTEL DOSSIER INSPECTION</h2>
                 </div>
-                <button id="btn-copy-full" class="btn-theme">COPY INTEL</button>
+                <div class="header-actions">
+                    <button id="btn-send-to-cipher" class="btn-icon" title="Load into Cyber-Deck">🔐 DECRYPT / HASH</button>
+                    <button id="btn-copy-full" class="btn-theme">📋 COPY INTEL</button>
+                </div>
             </header>
-            <div class="glass-panel full-note-content selectable">
-                <div id="full-note-text"></div>
+            <div class="full-note-layout">
+                <div class="glass-panel full-note-content selectable">
+                    <div id="full-note-text"></div>
+                </div>
+                <aside class="glass-panel ioc-sidebar">
+                    <h3 style="font-size: 0.95rem; color: var(--neon-orange); border-bottom: 1px solid var(--border-glass); padding-bottom: 8px;">
+                        🔍 EXTRACTED IOC ENTITIES
+                    </h3>
+                    <div id="full-note-iocs" style="display: flex; flex-direction: column; gap: 10px; font-family: var(--font-mono); font-size: 0.8rem;">
+                        <span style="color: var(--text-muted);">No structured IOCs detected in this block.</span>
+                    </div>
+                </aside>
             </div>
         </div>
 
-        <!-- OSINT TARGETS VIEW -->
+        <!-- ==========================================================================
+             VIEW 4: OSINT TARGET DATABASE, NODE GRAPH & ANALYTICS
+             ========================================================================== -->
         <div id="osint-view" class="view-section hidden">
-            <header class="glass-panel dash-header" style="border-bottom: 2px solid var(--neon-blue);">
+            <header class="glass-panel hud-corners dash-header" style="border-bottom: 2px solid var(--neon-blue);">
                 <div class="header-left">
-                    <button id="btn-back-from-osint" class="btn-icon">←</button>
+                    <button id="btn-back-from-osint" class="btn-icon">← BACK</button>
                     <h2 class="header-title" style="color: var(--neon-blue);">OSINT TARGET DATABASE</h2>
                 </div>
                 <div class="header-actions">
+                    <button id="btn-osint-mode-grid" class="btn-icon active-toggle" title="Target Cards Grid">🗂️ CARDS</button>
+                    <button id="btn-osint-mode-graph" class="btn-icon" title="Interactive Vis-Network Node Link Analysis">🕸️ LINK GRAPH</button>
+                    <button id="btn-osint-mode-analytics" class="btn-icon" title="Threat Matrix & Telemetry Charts">📊 ANALYTICS</button>
                     <button id="btn-open-osint-modal" class="btn-primary" style="border-color: var(--neon-blue); color: var(--neon-blue);">+ NEW TARGET</button>
                 </div>
             </header>
             
             <div class="controls-row">
-                <input type="text" id="search-osint-input" placeholder="Search target database..." autocomplete="off" style="flex-grow: 1;">
+                <input type="text" id="search-osint-input" placeholder="Fuzzy search targets by name, mobile, father, ID, address, IP, or threat level..." autocomplete="off" style="flex-grow: 1;">
+                <div class="filter-pills" id="osint-risk-filters">
+                    <span class="filter-pill active" data-risk="ALL">ALL TARGETS</span>
+                    <span class="filter-pill" data-risk="CRITICAL" style="color: var(--neon-red);">CRITICAL</span>
+                    <span class="filter-pill" data-risk="HIGH" style="color: var(--neon-orange);">HIGH</span>
+                    <span class="filter-pill" data-risk="MEDIUM" style="color: var(--neon-blue);">MEDIUM</span>
+                    <span class="filter-pill" data-risk="LOW" style="color: var(--neon-green);">LOW</span>
+                </div>
             </div>
 
+            <!-- Interactive Vis-Network Graph Container (Hidden by default) -->
+            <div id="osint-graph-wrapper" class="hidden">
+                <div id="osint-graph-container">
+                    <div class="graph-legend">
+                        <span><i class="legend-dot" style="background: #ff003c;"></i>Primary Target</span>
+                        <span><i class="legend-dot" style="background: #00e5ff;"></i>Phone / Mobile</span>
+                        <span><i class="legend-dot" style="background: #ffaa00;"></i>Father / Associate</span>
+                        <span><i class="legend-dot" style="background: #00ff66;"></i>Location / Address</span>
+                        <span><i class="legend-dot" style="background: #b026ff;"></i>ID / Email / IP</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart.js Threat Analytics Container (Hidden by default) -->
+            <div id="osint-analytics-container" class="hidden">
+                <div class="glass-panel chart-box">
+                    <h4 style="margin-bottom: 14px; font-size: 0.9rem; color: var(--neon-blue);">TARGET THREAT DISTRIBUTION</h4>
+                    <canvas id="chart-threat-levels" style="max-height: 240px;"></canvas>
+                </div>
+                <div class="glass-panel chart-box">
+                    <h4 style="margin-bottom: 14px; font-size: 0.9rem; color: var(--neon-orange);">EXTRACTED IOC METRICS</h4>
+                    <canvas id="chart-ioc-types" style="max-height: 240px;"></canvas>
+                </div>
+            </div>
+
+            <!-- OSINT Target Cards Grid -->
             <div id="osint-targets-grid" class="dashboard-grid"></div>
         </div>
     </div>
 
-    <!-- UNIVERSAL MODAL -->
+    <!-- ==========================================================================
+         UNIVERSAL CREATE / EDIT MODAL
+         ========================================================================== -->
     <div id="app-modal" class="modal-overlay">
-        <div class="glass-panel modal-card">
-            <h3 id="modal-title" style="margin-bottom: 20px; color: var(--accent-secondary);">Title</h3>
+        <div class="glass-panel hud-corners modal-card">
+            <h3 id="modal-title" style="margin-bottom: 18px; color: var(--accent-secondary);">Title</h3>
             <div class="modal-body">
-                <input type="text" id="modal-input-text" class="hidden" placeholder="Enter name...">
-                <textarea id="modal-input-area" class="hidden" placeholder="Enter details..."></textarea>
+                <input type="text" id="modal-input-text" class="hidden" placeholder="Enter collection or item name...">
+                <textarea id="modal-input-area" class="hidden" placeholder="Enter operational intelligence details..."></textarea>
                 
                 <div id="color-picker" class="color-picker hidden">
                     <div class="color-dot selected" data-color="var(--border-glass)" style="background: #888;"></div>
@@ -312,37 +1386,137 @@
                     <div class="color-dot" data-color="#ffffff" style="background: #ffffff;"></div>
                 </div>
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px;">
-                <button id="modal-btn-cancel">CANCEL</button>
-                <button id="modal-btn-save" class="btn-theme">SAVE</button>
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 22px;">
+                <button id="modal-btn-cancel" class="btn-icon">CANCEL</button>
+                <button id="modal-btn-save" class="btn-theme">SAVE RECORD</button>
             </div>
         </div>
     </div>
 
-    <!-- OSINT TARGET MODAL -->
+    <!-- ==========================================================================
+         OSINT TARGET PARSER MODAL (UPGRADED WITH THREAT LEVEL & AUTO-IOC)
+         ========================================================================== -->
     <div id="osint-modal" class="modal-overlay">
-        <div class="glass-panel modal-card">
-            <h3 style="margin-bottom: 20px; color: var(--neon-blue);">ADD OSINT TARGET</h3>
+        <div class="glass-panel hud-corners modal-card" style="max-width: 600px;">
+            <h3 style="margin-bottom: 18px; color: var(--neon-blue);">🎯 ADD & PARSE OSINT TARGET</h3>
             <div class="modal-body">
-                <label style="display: block; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-muted);">TARGET NAME</label>
-                <input type="text" id="osint-target-name" placeholder="e.g. John_Doe" style="margin-bottom: 15px;">
+                <div style="display: grid; grid-template-columns: 1fr 160px; gap: 12px; margin-bottom: 14px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted);">TARGET IDENTIFIER / CODENAME</label>
+                        <input type="text" id="osint-target-name" placeholder="e.g. John_Doe">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted);">THREAT LEVEL</label>
+                        <select id="osint-target-risk">
+                            <option value="MEDIUM">MEDIUM</option>
+                            <option value="CRITICAL">CRITICAL</option>
+                            <option value="HIGH">HIGH</option>
+                            <option value="LOW">LOW</option>
+                        </select>
+                    </div>
+                </div>
                 
-                <label style="display: block; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-muted);">RAW DATA (Paste complete notes block)</label>
-                <textarea id="osint-raw-data" placeholder="Paste raw intel here..." style="min-height: 180px;"></textarea>
+                <label style="display: block; margin-bottom: 6px; font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted);">
+                    RAW SURVEILLANCE DUMP (Auto-extracts Name, Mobile, Father, Alt, ID, Address, IPs & Emails)
+                </label>
+                <textarea id="osint-raw-data" placeholder="Paste raw intelligence block here...&#10;Example:&#10;👤 Name: Viktor Rostov&#10;📞 Mobile: +1-555-019-2834&#10;👨 Father: Nikolai Rostov&#10;🆔 ID: PASSPORT-9928172&#10;📍 Address: Sector 7, Neo-Zurich&#10;IP: 192.168.42.11" style="min-height: 190px;"></textarea>
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px;">
-                <button id="osint-btn-cancel">CANCEL</button>
-                <button id="osint-btn-save" class="btn-theme">PARSE & SAVE TARGET</button>
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 18px;">
+                <button id="osint-btn-cancel" class="btn-icon">CANCEL</button>
+                <button id="osint-btn-save" class="btn-theme">⚡ PARSE & SAVE TARGET</button>
             </div>
         </div>
     </div>
 
-    <!-- JAVASCRIPT LOGIC -->
+    <!-- ==========================================================================
+         CYBER-DECK CIPHER, HASH & ENCRYPTION MODAL
+         ========================================================================== -->
+    <div id="cipher-modal" class="modal-overlay">
+        <div class="glass-panel hud-corners modal-card" style="max-width: 620px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="color: var(--neon-orange);">🔐 CYBER-DECK CRYPTOGRAPHIC SUITE</h3>
+                <button id="cipher-btn-close" class="btn-icon">✕</button>
+            </div>
+            <div class="modal-body">
+                <label style="display: block; margin-bottom: 6px; font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted);">INPUT PAYLOAD / CIPHERTEXT</label>
+                <textarea id="cipher-input" placeholder="Paste text, Base64, Hex, or ROT13 payload here..." style="min-height: 100px;"></textarea>
+                
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;">
+                    <button class="btn-icon cipher-op" data-op="b64-enc">BASE64 ENCODE</button>
+                    <button class="btn-icon cipher-op" data-op="b64-dec">BASE64 DECODE</button>
+                    <button class="btn-icon cipher-op" data-op="hex-enc">HEX ENCODE</button>
+                    <button class="btn-icon cipher-op" data-op="hex-dec">HEX DECODE</button>
+                    <button class="btn-icon cipher-op" data-op="rot13">ROT-13 SHIFT</button>
+                    <button class="btn-icon cipher-op" data-op="sha256" style="color: var(--neon-blue);">SHA-256 HASH</button>
+                </div>
+
+                <label style="display: block; margin-bottom: 6px; font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted);">PROCESSED OUTPUT</label>
+                <textarea id="cipher-output" readonly placeholder="Output will appear here..." style="min-height: 100px; color: var(--neon-green);"></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px;">
+                <button id="cipher-btn-copy" class="btn-theme">📋 COPY OUTPUT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         CUSTOM TACTICAL CONFIRMATION MODAL (Replaces confirm())
+         ========================================================================== -->
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="glass-panel hud-corners modal-card" style="max-width: 420px; border-color: var(--neon-red);">
+            <h3 style="color: var(--neon-red); margin-bottom: 12px;">⚠️ CONFIRM DESTRUCTIVE ACTION</h3>
+            <p id="confirm-modal-msg" style="color: var(--text-main); font-size: 0.92rem; line-height: 1.5; margin-bottom: 22px;">
+                Are you sure you want to permanently destroy this record?
+            </p>
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button id="confirm-btn-no" class="btn-icon">ABORT</button>
+                <button id="confirm-btn-yes" class="btn-primary">CONFIRM PURGE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         INTERACTIVE TERMINAL CLI DRAWER
+         ========================================================================== -->
+    <div id="terminal-drawer" class="closed">
+        <div class="term-header">
+            <span>💻 EVIL_VAULT // TACTICAL CLI v3.4 (Type 'help' for commands)</span>
+            <button id="btn-close-cli" class="btn-icon" style="padding: 2px 8px;">✕</button>
+        </div>
+        <div id="term-output">
+            <div class="term-line">[SYSTEM] Evil Vault Tactical Kernel initialized. Type <span style="color:#fff;">help</span> for available OSINT & system commands.</div>
+        </div>
+        <div class="term-input-row">
+            <span class="term-prompt">root@evil-vault:~#</span>
+            <input type="text" id="term-input" placeholder="help | status | scan <name> | ioc | clear | panic | lock..." autocomplete="off">
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         BOTTOM LIVE AUDIT & TELEMETRY TICKER BAR
+         ========================================================================== -->
+    <footer id="status-ticker-bar">
+        <div class="ticker-left">
+            <span class="status-dot"></span>
+            <span id="audit-log-ticker">[ENCLAVE READY] Encrypted Firebase Firestore tunnel established.</span>
+        </div>
+        <div style="display: flex; gap: 16px; align-items: center;">
+            <span id="Shortcut-hint" class="hidden-mobile">SHORTCUTS: [`] CLI | [ESC x3] PANIC</span>
+            <span id="live-utc-clock">UTC --:--:--</span>
+        </div>
+    </footer>
+
+    <!-- ==========================================================================
+         JAVASCRIPT CORE ENGINE & FIREBASE INTEGRATION
+         ========================================================================== -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, query, where, onSnapshot, getDocs, setDoc } 
         from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+        // ==========================================================================
+        // 1. FIREBASE INITIALIZATION (Preserved from Original Code)
+        // ==========================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCJfw-FOR3um5CdFbYXh4m5niMLMDpu1tU",
             authDomain: "evil-vault.firebaseapp.com",
@@ -354,18 +1528,199 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // ==========================================================================
+        // 2. APPLICATION STATE & COLLECTION RESOLVERS
+        // ==========================================================================
         const AppState = {
-            isDecoy: false, isLocked: true, activeCategoryId: null, activeFullNoteText: "",
-            loginAttempts: 0, lockoutKey: 'evil_vault_lockout', unsubs: { categories: null, notes: null },
-            sortCats: 'newest', sortNotes: 'newest', isListView: localStorage.getItem('vault_list_view') === 'true',
+            isDecoy: false,
+            isLocked: true,
+            activeCategoryId: null,
+            activeFullNoteText: "",
+            loginAttempts: 0,
+            lockoutKey: 'evil_vault_lockout',
+            unsubs: { categories: null, notes: null },
+            sortCats: 'newest',
+            sortNotes: 'newest',
+            isListView: localStorage.getItem('vault_list_view') === 'true',
             selectedColor: 'var(--border-glass)',
-            vaultPrefix: 'vault_alpha_'
+            vaultPrefix: 'vault_alpha_',
+            audioEnabled: true,
+            matrixEnabled: true,
+            idleSecondsMax: 180,
+            idleSecondsRemaining: 180,
+            cachedCategories: [],
+            cachedNotes: [],
+            cachedOsint: [],
+            noteFilterMode: 'all',
+            osintRiskFilter: 'ALL',
+            osintViewMode: 'cards'
         };
 
         const COLL_CATS = () => AppState.vaultPrefix + "categories";
         const COLL_NOTES = () => AppState.vaultPrefix + "notes";
         const COLL_OSINT = () => AppState.vaultPrefix + "osint_targets";
 
+        // ==========================================================================
+        // 3. WEB AUDIO API TACTICAL SOUND SYNTHESIZER (Zero external audio files)
+        // ==========================================================================
+        const SoundFX = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+            },
+            playTone(freq = 800, type = 'sine', duration = 0.06, vol = 0.04) {
+                if (!AppState.audioEnabled) return;
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            },
+            click() { this.playTone(1100, 'triangle', 0.04, 0.03); },
+            success() {
+                this.playTone(587.33, 'sine', 0.08, 0.05);
+                setTimeout(() => this.playTone(880, 'sine', 0.14, 0.05), 70);
+            },
+            error() {
+                this.playTone(180, 'sawtooth', 0.15, 0.06);
+                setTimeout(() => this.playTone(130, 'sawtooth', 0.2, 0.06), 120);
+            },
+            scan() {
+                this.playTone(1400, 'sine', 0.05, 0.03);
+                setTimeout(() => this.playTone(1800, 'sine', 0.07, 0.03), 50);
+            }
+        };
+
+        // ==========================================================================
+        // 4. TACTICAL TOAST NOTIFICATIONS & CUSTOM CONFIRMATION (No alert/confirm)
+        // ==========================================================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `tactical-toast toast-${type}`;
+            const prefix = type === 'error' ? '[ERROR]' : type === 'success' ? '[OK]' : type === 'warn' ? '[WARN]' : '[INFO]';
+            toast.innerHTML = `<span><strong>${prefix}</strong> ${escapeHTML(message)}</span>`;
+            container.appendChild(toast);
+            
+            if (type === 'error') SoundFX.error();
+            else if (type === 'success') SoundFX.success();
+            else SoundFX.click();
+
+            logAudit(`${prefix} ${message}`);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(30px)';
+                toast.style.transition = '0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3400);
+        }
+
+        function requestConfirm(message) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('confirm-modal');
+                const msgEl = document.getElementById('confirm-modal-msg');
+                const btnYes = document.getElementById('confirm-btn-yes');
+                const btnNo = document.getElementById('confirm-btn-no');
+
+                msgEl.innerText = message;
+                overlay.classList.add('active');
+                SoundFX.error();
+
+                const cleanup = (result) => {
+                    overlay.classList.remove('active');
+                    btnYes.onclick = null;
+                    btnNo.onclick = null;
+                    resolve(result);
+                };
+
+                btnYes.onclick = () => cleanup(true);
+                btnNo.onclick = () => cleanup(false);
+            });
+        }
+
+        function logAudit(text) {
+            const ticker = document.getElementById('audit-log-ticker');
+            if (ticker) {
+                const timeStr = new Date().toLocaleTimeString();
+                ticker.innerText = `[${timeStr}] ${text}`;
+            }
+            const termOut = document.getElementById('term-output');
+            if (termOut) {
+                const line = document.createElement('div');
+                line.className = 'term-line';
+                line.style.color = '#8b949e';
+                line.innerText = `[${new Date().toLocaleTimeString()}] ${text}`;
+                termOut.appendChild(line);
+                termOut.scrollTop = termOut.scrollHeight;
+            }
+        }
+
+        // ==========================================================================
+        // 5. MATRIX DIGITAL RAIN CANVAS ENGINE
+        // ==========================================================================
+        const matrixCanvas = document.getElementById('matrix-canvas');
+        const mCtx = matrixCanvas.getContext('2d');
+        let matrixColumns = [];
+        const matrixChars = "01ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝABCDEF";
+
+        function resizeMatrix() {
+            matrixCanvas.width = window.innerWidth;
+            matrixCanvas.height = window.innerHeight;
+            const colCount = Math.floor(matrixCanvas.width / 16);
+            matrixColumns = Array(colCount).fill(1);
+        }
+        window.addEventListener('resize', resizeMatrix);
+        resizeMatrix();
+
+        function drawMatrixRain() {
+            if (!AppState.matrixEnabled || document.body.classList.contains('light-mode')) return;
+            mCtx.fillStyle = "rgba(5, 0, 4, 0.08)";
+            mCtx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+            mCtx.fillStyle = "#00e5ff";
+            mCtx.font = "14px 'Share Tech Mono', monospace";
+
+            for (let i = 0; i < matrixColumns.length; i++) {
+                const char = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+                mCtx.fillText(char, i * 16, matrixColumns[i] * 16);
+                if (matrixColumns[i] * 16 > matrixCanvas.height && Math.random() > 0.975) {
+                    matrixColumns[i] = 0;
+                }
+                matrixColumns[i]++;
+            }
+        }
+        setInterval(drawMatrixRain, 55);
+
+        // ==========================================================================
+        // 6. AUTOMATED IOC (INDICATOR OF COMPROMISE) REGEX EXTRACTOR
+        // ==========================================================================
+        function extractIOCs(text) {
+            if (!text) return { ips: [], emails: [], phones: [], urls: [], crypto: [], total: 0 };
+            const ips = [...new Set(text.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g) || [])];
+            const emails = [...new Set(text.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g) || [])];
+            const urls = [...new Set(text.match(/https?:\/\/[^\s"'<>]+/gi) || [])];
+            const phones = [...new Set(text.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g) || [])];
+            const crypto = [...new Set(text.match(/\b(?:0x[a-fA-F0-9]{40}|[13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-zA-HJ-NP-Z0-9]{39,59})\b/g) || [])];
+            const total = ips.length + emails.length + urls.length + phones.length + crypto.length;
+            return { ips, emails, phones, urls, crypto, total };
+        }
+
+        // ==========================================================================
+        // 7. DOM REFERENCES & SVG ICONS
+        // ==========================================================================
         const DOM = {
             views: { 
                 login: document.getElementById('login-view'), 
@@ -382,11 +1737,33 @@
                 notesTrash: document.getElementById('trashed-notes-grid'),
                 osint: document.getElementById('osint-targets-grid')
             },
-            dividers: { cats: document.getElementById('trash-divider-cats'), notes: document.getElementById('trash-divider-notes') },
-            sort: { cats: document.getElementById('sort-cats'), notes: document.getElementById('sort-notes') },
-            search: document.getElementById('search-input'), colorPicker: document.getElementById('color-picker'),
-            modal: { overlay: document.getElementById('app-modal'), title: document.getElementById('modal-title'), inputTxt: document.getElementById('modal-input-text'), inputArea: document.getElementById('modal-input-area'), btnSave: document.getElementById('modal-btn-save'), btnCancel: document.getElementById('modal-btn-cancel') },
-            osintModal: { overlay: document.getElementById('osint-modal'), nameInput: document.getElementById('osint-target-name'), rawArea: document.getElementById('osint-raw-data'), btnSave: document.getElementById('osint-btn-save'), btnCancel: document.getElementById('osint-btn-cancel') }
+            dividers: {
+                cats: document.getElementById('trash-divider-cats'),
+                notes: document.getElementById('trash-divider-notes')
+            },
+            sort: {
+                cats: document.getElementById('sort-cats'),
+                notes: document.getElementById('sort-notes')
+            },
+            search: document.getElementById('search-input'),
+            searchCats: document.getElementById('search-cats-input'),
+            colorPicker: document.getElementById('color-picker'),
+            modal: {
+                overlay: document.getElementById('app-modal'),
+                title: document.getElementById('modal-title'),
+                inputTxt: document.getElementById('modal-input-text'),
+                inputArea: document.getElementById('modal-input-area'),
+                btnSave: document.getElementById('modal-btn-save'),
+                btnCancel: document.getElementById('modal-btn-cancel')
+            },
+            osintModal: {
+                overlay: document.getElementById('osint-modal'),
+                nameInput: document.getElementById('osint-target-name'),
+                riskSelect: document.getElementById('osint-target-risk'),
+                rawArea: document.getElementById('osint-raw-data'),
+                btnSave: document.getElementById('osint-btn-save'),
+                btnCancel: document.getElementById('osint-btn-cancel')
+            }
         };
 
         const SVGS = {
@@ -399,69 +1776,274 @@
             clone: `<svg viewBox="0 0 24 24"><path d="M11 11h2v-3h3v-2h-3v-3h-2v3h-3v2h3v3zm10-5h-3v2h3v11h-11v-3h-2v3c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2v-11c0-1.1-.9-2-2-2zm-6 12h-11c-1.1 0-2-.9-2-2v-11c0-1.1.9-2 2-2h11c1.1 0 2 .9 2 2v11c0 1.1-.9 2-2 2z"/></svg>`
         };
 
-        const formatDate = (ts) => ts ? new Date(ts).toLocaleDateString() : '';
-        const escapeHTML = (str) => str.replace(/[&<>'"]/g, t => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[t] || t));
+        const formatDate = (ts) => ts ? new Date(ts).toLocaleDateString() + ' ' + new Date(ts).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+        const escapeHTML = (str) => String(str || '').replace(/[&<>'"]/g, t => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[t] || t));
         
         function fallbackCopy(text, btnElement) {
-            const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; document.body.appendChild(ta); ta.focus(); ta.select();
-            try { document.execCommand('copy'); const orig = btnElement.innerHTML; btnElement.innerHTML = `✓`; setTimeout(() => btnElement.innerHTML = orig, 1500); } catch (e) {}
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try {
+                document.execCommand('copy');
+                if (btnElement) {
+                    const orig = btnElement.innerHTML;
+                    btnElement.innerHTML = `✓`;
+                    setTimeout(() => btnElement.innerHTML = orig, 1500);
+                }
+                showToast("Copied intelligence block to clipboard.", "success");
+            } catch (e) {
+                showToast("Clipboard copy failed.", "error");
+            }
             document.body.removeChild(ta);
         }
 
         const showView = (v) => {
-            [DOM.views.cats, DOM.views.notes, DOM.views.fullNote, DOM.views.osint].forEach(el => { if(el) el.classList.add('hidden'); });
-            if(v === 'categories' && DOM.views.cats) DOM.views.cats.classList.remove('hidden');
-            if(v === 'notes' && DOM.views.notes) DOM.views.notes.classList.remove('hidden');
-            if(v === 'fullNote' && DOM.views.fullNote) DOM.views.fullNote.classList.remove('hidden');
-            if(v === 'osint' && DOM.views.osint) DOM.views.osint.classList.remove('hidden');
+            SoundFX.click();
+            [DOM.views.cats, DOM.views.notes, DOM.views.fullNote, DOM.views.osint].forEach(el => {
+                if (el) el.classList.add('hidden');
+            });
+            if (v === 'categories' && DOM.views.cats) DOM.views.cats.classList.remove('hidden');
+            if (v === 'notes' && DOM.views.notes) DOM.views.notes.classList.remove('hidden');
+            if (v === 'fullNote' && DOM.views.fullNote) DOM.views.fullNote.classList.remove('hidden');
+            if (v === 'osint' && DOM.views.osint) DOM.views.osint.classList.remove('hidden');
         };
 
-        if(localStorage.getItem('vault_light_mode') === 'true') document.body.classList.add('light-mode');
+        // ==========================================================================
+        // 8. HEADER TOGGLES (THEME, CRT, MATRIX, AUDIO, PANIC, CLI)
+        // ==========================================================================
+        if (localStorage.getItem('vault_light_mode') === 'true') document.body.classList.add('light-mode');
+        
         document.getElementById('btn-theme-toggle').onclick = () => {
             document.body.classList.toggle('light-mode');
-            localStorage.setItem('vault_light_mode', document.body.classList.contains('light-mode'));
+            const isLight = document.body.classList.contains('light-mode');
+            localStorage.setItem('vault_light_mode', isLight);
+            showToast(`Switched to ${isLight ? 'Corporate Light' : 'Dark Neon'} Mode.`);
+        };
+
+        document.getElementById('btn-crt-toggle').onclick = (e) => {
+            document.body.classList.toggle('crt-active');
+            e.currentTarget.classList.toggle('active-toggle');
+            showToast(`CRT Scanline Filter ${document.body.classList.contains('crt-active') ? 'Enabled' : 'Disabled'}.`);
+        };
+
+        document.getElementById('btn-matrix-toggle').onclick = (e) => {
+            AppState.matrixEnabled = !AppState.matrixEnabled;
+            matrixCanvas.classList.toggle('hidden', !AppState.matrixEnabled);
+            e.currentTarget.classList.toggle('active-toggle', AppState.matrixEnabled);
+            showToast(`Matrix Rain Background ${AppState.matrixEnabled ? 'Online' : 'Offline'}.`);
+        };
+
+        document.getElementById('btn-audio-toggle').onclick = (e) => {
+            AppState.audioEnabled = !AppState.audioEnabled;
+            e.currentTarget.classList.toggle('active-toggle', AppState.audioEnabled);
+            e.currentTarget.innerText = AppState.audioEnabled ? '🔊 SFX' : '🔇 MUTE';
+            showToast(`Tactical Audio Synthesizer ${AppState.audioEnabled ? 'Enabled' : 'Muted'}.`);
         };
 
         const updateGridClasses = () => {
             const grids = [DOM.grids.cats, DOM.grids.catsTrash, DOM.grids.notes, DOM.grids.notesTrash, DOM.grids.osint];
-            grids.forEach(g => { if(g) AppState.isListView ? g.classList.add('list-view') : g.classList.remove('list-view'); });
+            grids.forEach(g => {
+                if (g) AppState.isListView ? g.classList.add('list-view') : g.classList.remove('list-view');
+            });
         };
         updateGridClasses();
+
         document.getElementById('btn-toggle-view').onclick = () => {
             AppState.isListView = !AppState.isListView;
             localStorage.setItem('vault_list_view', AppState.isListView);
             updateGridClasses();
+            showToast(`Layout switched to ${AppState.isListView ? 'Tactical List' : '3D Grid'} View.`);
         };
 
+        // Duress Panic Mode (Button + ESC x3 shortcut)
+        const triggerPanicScreen = () => {
+            document.getElementById('panic-screen').classList.remove('hidden');
+            logAudit("[WARN] DURESS PANIC PROTOCOL ACTIVATED.");
+        };
+        document.getElementById('btn-panic-trigger').onclick = triggerPanicScreen;
+        document.getElementById('panic-exit-trigger').ondblclick = () => {
+            document.getElementById('panic-screen').classList.add('hidden');
+            showToast("Restored Clandestine Enclave View.", "success");
+        };
+
+        let escPressCount = 0;
+        let escTimer = null;
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                escPressCount++;
+                clearTimeout(escTimer);
+                if (escPressCount >= 3) {
+                    escPressCount = 0;
+                    triggerPanicScreen();
+                } else {
+                    escTimer = setTimeout(() => { escPressCount = 0; }, 800);
+                }
+            }
+            // Backtick (`) toggles CLI Drawer
+            if (e.key === '`' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+                e.preventDefault();
+                toggleCliDrawer();
+            }
+            // Ctrl+K focuses active search bar
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                if (!DOM.views.cats.classList.contains('hidden')) DOM.searchCats.focus();
+                else if (!DOM.views.notes.classList.contains('hidden')) DOM.search.focus();
+                else if (!DOM.views.osint.classList.contains('hidden')) document.getElementById('search-osint-input').focus();
+            }
+        });
+
+        // ==========================================================================
+        // 9. SORTING, IDLE AUTO-LOCK & LIVE CLOCK TELEMETRY
+        // ==========================================================================
         const sortData = (arr, type) => {
-            return arr.sort((a, b) => {
-                if (a.pinned !== b.pinned) return b.pinned ? 1 : -1;
+            return [...arr].sort((a, b) => {
+                if (Boolean(a.pinned) !== Boolean(b.pinned)) return b.pinned ? 1 : -1;
                 if (type === 'newest') return (b.timestamp || 0) - (a.timestamp || 0);
                 if (type === 'oldest') return (a.timestamp || 0) - (b.timestamp || 0);
-                if (type === 'az') return (a.name || a.text || '').localeCompare(b.name || b.text || '');
+                if (type === 'az') return (a.name || a.text || a.targetName || '').localeCompare(b.name || b.text || b.targetName || '');
                 return 0;
             });
         };
 
-        DOM.sort.cats.onchange = (e) => { AppState.sortCats = e.target.value; loadCategories(); };
-        DOM.sort.notes.onchange = (e) => { AppState.sortNotes = e.target.value; loadNotes(AppState.activeCategoryId); };
+        DOM.sort.cats.onchange = (e) => { AppState.sortCats = e.target.value; renderCategoriesFromCache(); };
+        DOM.sort.notes.onchange = (e) => { AppState.sortNotes = e.target.value; renderNotesFromCache(); };
 
-        let idleTimer;
+        // Live Clocks & Auto-Lock Countdown
         const lockApp = () => {
-            if(!AppState.isLocked) {
-                AppState.isLocked = true; DOM.views.login.classList.remove('hidden'); DOM.views.app.classList.add('hidden');
-                document.getElementById('pass-input').value = ""; document.getElementById('login-status').innerText = "SESSION LOCKED";
+            if (!AppState.isLocked) {
+                AppState.isLocked = true;
+                DOM.views.login.classList.remove('hidden');
+                DOM.views.app.classList.add('hidden');
+                document.getElementById('pass-input').value = "";
+                document.getElementById('login-status').innerText = "SESSION LOCKED DUE TO INACTIVITY";
+                SoundFX.error();
             }
         };
-        const resetIdleTimer = () => { if(!AppState.isLocked) { clearTimeout(idleTimer); idleTimer = setTimeout(lockApp, 3 * 60 * 1000); }};
-        ['mousemove', 'keydown', 'touchstart'].forEach(evt => document.addEventListener(evt, resetIdleTimer));
-        document.addEventListener('visibilitychange', () => { if(document.hidden) lockApp(); });
+
+        const resetIdleTimer = () => {
+            if (!AppState.isLocked) {
+                AppState.idleSecondsRemaining = AppState.idleSecondsMax;
+            }
+        };
+
+        document.getElementById('idle-timeout-select').onchange = (e) => {
+            AppState.idleSecondsMax = parseInt(e.target.value, 10) || 180;
+            AppState.idleSecondsRemaining = AppState.idleSecondsMax;
+            showToast(`Session Auto-Lock set to ${AppState.idleSecondsMax / 60} minutes.`);
+        };
+
+        ['mousemove', 'keydown', 'touchstart', 'click'].forEach(evt => document.addEventListener(evt, resetIdleTimer));
+        document.addEventListener('visibilitychange', () => { if (document.hidden) lockApp(); });
+
+        setInterval(() => {
+            const now = new Date();
+            const hh = now.getHours().toString().padStart(2, '0');
+            const mm = now.getMinutes().toString().padStart(2, '0');
+            const ss = now.getSeconds().toString().padStart(2, '0');
+            
+            const loginClock = document.getElementById('login-live-clock');
+            if (loginClock) loginClock.innerText = `${hh}:${mm}:${ss}`;
+            
+            const utcClock = document.getElementById('live-utc-clock');
+            if (utcClock) utcClock.innerText = `LOCAL ${hh}:${mm}:${ss}`;
+
+            // Check Lockout status on Login screen
+            const lockUntil = localStorage.getItem(AppState.lockoutKey);
+            const lockoutDisplay = document.getElementById('lockout-timer-display');
+            if (lockUntil && Date.now() < parseInt(lockUntil, 10)) {
+                const remSec = Math.ceil((parseInt(lockUntil, 10) - Date.now()) / 1000);
+                if (lockoutDisplay) lockoutDisplay.innerText = `LOCKED (${remSec}s)`;
+            } else if (lockoutDisplay) {
+                lockoutDisplay.innerText = `STATUS: READY`;
+            }
+
+            // Decrement Idle Countdown when unlocked
+            if (!AppState.isLocked) {
+                AppState.idleSecondsRemaining--;
+                const m = Math.floor(Math.max(0, AppState.idleSecondsRemaining) / 60).toString().padStart(2, '0');
+                const s = (Math.max(0, AppState.idleSecondsRemaining) % 60).toString().padStart(2, '0');
+                const idleEl = document.getElementById('stat-idle-timer');
+                if (idleEl) idleEl.innerText = `${m}:${s}`;
+                if (AppState.idleSecondsRemaining <= 0) {
+                    lockApp();
+                }
+            }
+        }, 1000);
+
+        // ==========================================================================
+        // 10. TIME-BASED MASTER & DECOY AUTHENTICATION
+        // ==========================================================================
+        const handleLogin = () => {
+            const lockUntil = localStorage.getItem(AppState.lockoutKey);
+            if (lockUntil && Date.now() < parseInt(lockUntil, 10)) {
+                showToast("System locked due to excessive failed attempts.", "error");
+                return;
+            }
+            
+            const pass = document.getElementById('pass-input').value.trim();
+            const now = new Date();
+            const correctMaster = now.getHours().toString().padStart(2, '0') + now.getMinutes().toString().padStart(2, '0');
+            const correctDecoy = now.getMinutes().toString().padStart(2, '0') + now.getHours().toString().padStart(2, '0');
+
+            if (pass === correctMaster || pass === correctDecoy) {
+                AppState.isDecoy = (pass === correctDecoy && correctMaster !== correctDecoy);
+                AppState.vaultPrefix = AppState.isDecoy ? 'vault_decoy_' : 'vault_alpha_';
+                AppState.isLocked = false;
+                AppState.loginAttempts = 0;
+                
+                document.documentElement.style.setProperty('--accent-secondary', 'var(--neon-blue)');
+                document.getElementById('decoy-badge').classList.toggle('hidden', !AppState.isDecoy);
+                document.getElementById('stat-enclave-mode').innerText = AppState.isDecoy ? 'DECOY // SAFE' : 'ALPHA // MASTER';
+                document.getElementById('stat-enclave-mode').style.color = AppState.isDecoy ? 'var(--neon-orange)' : 'var(--neon-green)';
+
+                DOM.views.login.classList.add('hidden');
+                DOM.views.app.classList.remove('hidden');
+                showView('categories'); 
+                loadCategories();
+                window.loadOsintTargets();
+                resetIdleTimer();
+                showToast(AppState.isDecoy ? "Decoy Enclave Mounted." : "Master Enclave Decrypted.", "success");
+            } else {
+                AppState.loginAttempts++;
+                document.getElementById('pass-input').value = "";
+                document.getElementById('login-status').innerText = `INVALID HEX. ATTEMPT ${AppState.loginAttempts}/3`;
+                SoundFX.error();
+                if (AppState.loginAttempts >= 3) {
+                    localStorage.setItem(AppState.lockoutKey, Date.now() + (30 * 60 * 1000));
+                    showToast("3 Failed Attempts. Enclave locked for 30 minutes.", "error");
+                }
+            }
+        };
+        document.getElementById('btn-unlock').onclick = handleLogin;
+        document.getElementById('pass-input').onkeydown = (e) => { if (e.key === 'Enter') handleLogin(); };
+
+        // ==========================================================================
+        // 11. FIRESTORE REAL-TIME LISTENERS & FUSE.JS FUZZY RENDERING
+        // ==========================================================================
+        const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
         const loadCategories = () => {
             if (AppState.unsubs.categories) AppState.unsubs.categories();
             AppState.unsubs.categories = onSnapshot(collection(db, COLL_CATS()), 
-                (snap) => processAndRender(snap, true, DOM.grids.cats, DOM.grids.catsTrash, DOM.dividers.cats),
-                (err) => console.error("Categories Load Error:", err)
+                async (snap) => {
+                    const items = [];
+                    for (const docSnap of snap.docs) {
+                        const data = docSnap.data();
+                        if (data.trashed && data.trashedAt && (Date.now() - data.trashedAt > THIRTY_DAYS)) {
+                            await deleteDoc(doc(db, COLL_CATS(), docSnap.id));
+                            continue;
+                        }
+                        items.push({ id: docSnap.id, ...data });
+                    }
+                    AppState.cachedCategories = items;
+                    document.getElementById('stat-total-cats').innerText = items.filter(i => !i.trashed).length;
+                    renderCategoriesFromCache();
+                },
+                (err) => showToast("Firestore Categories Sync Error", "error")
             );
         };
 
@@ -470,53 +2052,72 @@
             if (AppState.unsubs.notes) AppState.unsubs.notes();
             const q = query(collection(db, COLL_NOTES()), where("category", "==", catId));
             AppState.unsubs.notes = onSnapshot(q, 
-                (snap) => processAndRender(snap, false, DOM.grids.notes, DOM.grids.notesTrash, DOM.dividers.notes),
-                (err) => console.error("Notes Load Error:", err)
+                async (snap) => {
+                    const items = [];
+                    for (const docSnap of snap.docs) {
+                        const data = docSnap.data();
+                        if (data.trashed && data.trashedAt && (Date.now() - data.trashedAt > THIRTY_DAYS)) {
+                            await deleteDoc(doc(db, COLL_NOTES(), docSnap.id));
+                            continue;
+                        }
+                        items.push({ id: docSnap.id, ...data });
+                    }
+                    AppState.cachedNotes = items;
+                    renderNotesFromCache();
+                },
+                (err) => showToast("Firestore Notes Sync Error", "error")
             );
         };
 
-        const handleLogin = () => {
-            const lockUntil = localStorage.getItem(AppState.lockoutKey);
-            if (lockUntil && Date.now() < parseInt(lockUntil)) return; 
+        function renderCategoriesFromCache() {
+            const term = (DOM.searchCats.value || '').trim();
+            let list = [...AppState.cachedCategories];
             
-            const pass = document.getElementById('pass-input').value;
-            const now = new Date();
-            const correctMaster = now.getHours().toString().padStart(2, '0') + now.getMinutes().toString().padStart(2, '0');
-            const correctDecoy = now.getMinutes().toString().padStart(2, '0') + now.getHours().toString().padStart(2, '0');
-
-            if (pass === correctMaster || pass === correctDecoy) {
-                AppState.isDecoy = (pass === correctDecoy && correctMaster !== correctDecoy);
-                AppState.isLocked = false;
-                document.documentElement.style.setProperty('--accent-secondary', 'var(--neon-blue)');
-
-                DOM.views.login.classList.add('hidden'); DOM.views.app.classList.remove('hidden');
-                showView('categories'); 
-                loadCategories();
-                resetIdleTimer();
-            } else {
-                AppState.loginAttempts++; document.getElementById('pass-input').value = "";
-                document.getElementById('login-status').innerText = `INVALID HEX. ATTEMPT ${AppState.loginAttempts}/3`;
-                if (AppState.loginAttempts >= 3) localStorage.setItem(AppState.lockoutKey, Date.now() + (30 * 60 * 1000));
+            if (term && window.Fuse) {
+                const fuse = new Fuse(list, { keys: ['name'], threshold: 0.38 });
+                list = fuse.search(term).map(r => r.item);
+            } else if (term) {
+                list = list.filter(c => (c.name || '').toLowerCase().includes(term.toLowerCase()));
             }
-        };
-        document.getElementById('btn-unlock').onclick = handleLogin;
-        document.getElementById('pass-input').onkeydown = (e) => { if (e.key === 'Enter') handleLogin(); };
 
-        const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
-        const processAndRender = async (snapshot, isCat, targetGrid, targetTrashGrid, dividerElement) => {
-            targetGrid.innerHTML = ''; targetTrashGrid.innerHTML = '';
-            let rawData = [];
-            
-            for (const docSnap of snapshot.docs) {
-                const data = docSnap.data();
-                if (data.trashed && data.trashedAt && (Date.now() - data.trashedAt > THIRTY_DAYS)) {
-                    await deleteDoc(doc(db, isCat ? COLL_CATS() : COLL_NOTES(), docSnap.id));
-                    continue; 
+            const sorted = sortData(list, AppState.sortCats);
+            renderCardsList(sorted, true, DOM.grids.cats, DOM.grids.catsTrash, DOM.dividers.cats);
+        }
+
+        function renderNotesFromCache() {
+            const rawQuery = (DOM.search.value || '').trim();
+            let list = [...AppState.cachedNotes];
+
+            // Pill filter
+            if (AppState.noteFilterMode === 'pinned') {
+                list = list.filter(n => n.pinned);
+            } else if (AppState.noteFilterMode === 'ioc') {
+                list = list.filter(n => extractIOCs(n.text).total > 0);
+            }
+
+            // Prefix / Fuzzy search
+            if (rawQuery) {
+                if (rawQuery.toLowerCase() === 'tag:pinned') {
+                    list = list.filter(n => n.pinned);
+                } else if (rawQuery.toLowerCase() === 'has:ip') {
+                    list = list.filter(n => extractIOCs(n.text).ips.length > 0);
+                } else if (rawQuery.toLowerCase() === 'has:email') {
+                    list = list.filter(n => extractIOCs(n.text).emails.length > 0);
+                } else if (window.Fuse) {
+                    const fuse = new Fuse(list, { keys: ['text'], threshold: 0.38 });
+                    list = fuse.search(rawQuery).map(r => r.item);
+                } else {
+                    list = list.filter(n => (n.text || '').toLowerCase().includes(rawQuery.toLowerCase()));
                 }
-                rawData.push({ id: docSnap.id, ...data });
             }
 
-            const sortedData = sortData(rawData, isCat ? AppState.sortCats : AppState.sortNotes);
+            const sorted = sortData(list, AppState.sortNotes);
+            renderCardsList(sorted, false, DOM.grids.notes, DOM.grids.notesTrash, DOM.dividers.notes);
+        }
+
+        function renderCardsList(sortedData, isCat, targetGrid, targetTrashGrid, dividerElement) {
+            targetGrid.innerHTML = '';
+            targetTrashGrid.innerHTML = '';
             let activeCount = 0, trashCount = 0;
 
             sortedData.forEach(data => {
@@ -526,17 +2127,18 @@
                 card.dataset.id = data.id; 
                 
                 const customColor = data.color || 'var(--border-glass)';
-                if(isCat) {
+                if (isCat) {
                     card.dataset.name = data.name;
                     card.dataset.color = customColor;
                 } else {
                     card.dataset.text = data.text;
+                    card.dataset.color = customColor;
                 }
                 
                 const pinClass = data.pinned ? 'is-pinned' : '';
                 const pinIconColor = data.pinned ? 'var(--neon-orange)' : '';
 
-                let actions = isTrashed ? 
+                const actions = isTrashed ? 
                     `<button class="btn-icon action-restore" title="Restore">${SVGS.restore}</button>
                      <button class="btn-icon danger action-perm" title="Destroy Permanently">${SVGS.permDelete}</button>` : 
                     `<button class="btn-icon action-pin" style="color:${pinIconColor}" title="Pin">${SVGS.pin}</button>
@@ -545,30 +2147,74 @@
                      <button class="btn-icon action-edit" title="Edit">${SVGS.edit}</button>
                      <button class="btn-icon danger action-delete" title="Trash">${SVGS.trash}</button>`;
 
-                const content = isCat ? `<h3>${escapeHTML(data.name)}</h3>` : `<p>${escapeHTML(data.text)}</p>`;
+                // Extract IOC summary badges for Note cards
+                let iocBadgesHTML = '';
+                if (!isCat) {
+                    const iocs = extractIOCs(data.text);
+                    const badges = [];
+                    if (iocs.ips.length) badges.push(`<span class="intel-badge">🌐 ${iocs.ips.length} IP</span>`);
+                    if (iocs.emails.length) badges.push(`<span class="intel-badge">✉️ ${iocs.emails.length} MAIL</span>`);
+                    if (iocs.phones.length) badges.push(`<span class="intel-badge">📞 ${iocs.phones.length} TEL</span>`);
+                    if (iocs.urls.length) badges.push(`<span class="intel-badge">🔗 ${iocs.urls.length} URL</span>`);
+                    if (iocs.crypto.length) badges.push(`<span class="intel-badge">₿ ${iocs.crypto.length} CRYPTO</span>`);
+                    if (badges.length) iocBadgesHTML = `<div class="badge-row">${badges.join('')}</div>`;
+                }
+
+                const content = isCat 
+                    ? `<h3>${escapeHTML(data.name)}</h3>` 
+                    : `<p>${escapeHTML(data.text)}</p>${iocBadgesHTML}`;
                 
                 card.innerHTML = `
                     <div class="card-inner ${pinClass}" style="--card-color: ${customColor}">
                         <div class="card-actions">${actions}</div>
                         <div class="card-content">${content}</div>
-                        <div class="timestamp">${formatDate(data.timestamp)}</div>
+                        <div class="card-footer-meta">
+                            <span class="timestamp">${formatDate(data.timestamp)}</span>
+                            ${data.pinned ? `<span class="intel-badge" style="color:var(--neon-orange);border-color:var(--neon-orange);">PINNED</span>` : ''}
+                        </div>
                     </div>`;
 
                 isTrashed ? (targetTrashGrid.appendChild(card), trashCount++) : (targetGrid.appendChild(card), activeCount++);
             });
 
-            if (activeCount === 0) targetGrid.innerHTML = `<div class="empty-state"><h3>No Active Items Found</h3></div>`;
+            if (activeCount === 0) targetGrid.innerHTML = `<div class="empty-state"><h3>No Active Intelligence Records Found</h3></div>`;
             dividerElement.classList.toggle('hidden', trashCount === 0);
-        };
+        }
 
+        // Search & Filter Listeners
+        DOM.searchCats.addEventListener('input', renderCategoriesFromCache);
+        DOM.search.addEventListener('input', renderNotesFromCache);
+
+        document.querySelectorAll('#notes-view .filter-pill').forEach(pill => {
+            pill.onclick = () => {
+                document.querySelectorAll('#notes-view .filter-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                AppState.noteFilterMode = pill.dataset.filter;
+                renderNotesFromCache();
+            };
+        });
+
+        // ==========================================================================
+        // 12. UNIVERSAL MODAL & FULL-NOTE IOC RENDERER
+        // ==========================================================================
         let currentModalAction = null;
         const openModal = (title, type, val, showColors, onSave) => {
-            DOM.modal.title.innerText = title; currentModalAction = onSave;
-            DOM.modal.inputTxt.classList.add('hidden'); DOM.modal.inputArea.classList.add('hidden');
+            SoundFX.click();
+            DOM.modal.title.innerText = title;
+            currentModalAction = onSave;
+            DOM.modal.inputTxt.classList.add('hidden');
+            DOM.modal.inputArea.classList.add('hidden');
             DOM.colorPicker.classList.add('hidden');
             
-            if (type === 'text') { DOM.modal.inputTxt.classList.remove('hidden'); DOM.modal.inputTxt.value = val; setTimeout(() => DOM.modal.inputTxt.focus(), 100); } 
-            else { DOM.modal.inputArea.classList.remove('hidden'); DOM.modal.inputArea.value = val; setTimeout(() => DOM.modal.inputArea.focus(), 100); }
+            if (type === 'text') {
+                DOM.modal.inputTxt.classList.remove('hidden');
+                DOM.modal.inputTxt.value = val;
+                setTimeout(() => DOM.modal.inputTxt.focus(), 100);
+            } else {
+                DOM.modal.inputArea.classList.remove('hidden');
+                DOM.modal.inputArea.value = val;
+                setTimeout(() => DOM.modal.inputArea.focus(), 100);
+            }
             
             if (showColors) {
                 DOM.colorPicker.classList.remove('hidden');
@@ -587,47 +2233,125 @@
             };
         });
 
-        DOM.modal.btnCancel.onclick = () => { DOM.modal.overlay.classList.remove('active'); currentModalAction = null; };
+        DOM.modal.btnCancel.onclick = () => {
+            DOM.modal.overlay.classList.remove('active');
+            currentModalAction = null;
+        };
         DOM.modal.btnSave.onclick = () => {
             const val = !DOM.modal.inputTxt.classList.contains('hidden') ? DOM.modal.inputTxt.value.trim() : DOM.modal.inputArea.value.trim();
-            if (val && currentModalAction) { currentModalAction(val, AppState.selectedColor); DOM.modal.overlay.classList.remove('active'); currentModalAction = null; }
+            if (val && currentModalAction) {
+                const cleanVal = window.DOMPurify ? DOMPurify.sanitize(val) : val;
+                currentModalAction(cleanVal, AppState.selectedColor);
+                DOM.modal.overlay.classList.remove('active');
+                currentModalAction = null;
+                showToast("Intelligence record saved to Firestore.", "success");
+            }
         };
 
+        function openFullNoteInspection(text) {
+            AppState.activeFullNoteText = text;
+            const container = document.getElementById('full-note-text');
+            const iocSidebar = document.getElementById('full-note-iocs');
+
+            // Highlight IOCs inside full note view safely
+            let safeHTML = escapeHTML(text);
+            safeHTML = safeHTML.replace(/\b((?:\d{1,3}\.){3}\d{1,3})\b/g, `<span class="ioc-highlight" title="IPv4 Address">🌐 $1</span>`);
+            safeHTML = safeHTML.replace(/\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})\b/g, `<span class="ioc-highlight" title="Email Address">✉️ $1</span>`);
+            container.innerHTML = safeHTML;
+
+            // Populate IOC Sidebar
+            const iocs = extractIOCs(text);
+            if (iocs.total === 0) {
+                iocSidebar.innerHTML = `<span style="color: var(--text-muted);">No structured IOCs detected in this block.</span>`;
+            } else {
+                const blocks = [];
+                if (iocs.ips.length) blocks.push(`<div><strong style="color:var(--neon-blue);">IPv4 (${iocs.ips.length}):</strong><br>${iocs.ips.map(escapeHTML).join('<br>')}</div>`);
+                if (iocs.emails.length) blocks.push(`<div><strong style="color:var(--neon-green);">EMAILS (${iocs.emails.length}):</strong><br>${iocs.emails.map(escapeHTML).join('<br>')}</div>`);
+                if (iocs.phones.length) blocks.push(`<div><strong style="color:var(--neon-orange);">PHONES (${iocs.phones.length}):</strong><br>${iocs.phones.map(escapeHTML).join('<br>')}</div>`);
+                if (iocs.urls.length) blocks.push(`<div><strong style="color:var(--neon-purple);">URLS (${iocs.urls.length}):</strong><br>${iocs.urls.map(escapeHTML).join('<br>')}</div>`);
+                if (iocs.crypto.length) blocks.push(`<div><strong style="color:var(--neon-yellow);">CRYPTO (${iocs.crypto.length}):</strong><br>${iocs.crypto.map(escapeHTML).join('<br>')}</div>`);
+                iocSidebar.innerHTML = blocks.join('<hr style="border-color:var(--border-glass); margin:4px 0;">');
+            }
+            showView('fullNote');
+        }
+
+        // Global Click Delegation for Categories & Notes
         document.addEventListener('click', async (e) => {
-            if(AppState.isLocked && !e.target.closest('#login-view')) return; 
+            if (AppState.isLocked && !e.target.closest('#login-view')) return; 
             
-            if (e.target.closest('#btn-add-cat')) { openModal("NEW COLLECTION", "text", "", true, async (val, col) => { await addDoc(collection(db, COLL_CATS()), { name: val, color: col, trashed: false, pinned: false, timestamp: Date.now() }); }); return; }
-            if (e.target.closest('#btn-add-note')) { openModal("ADD INTEL", "textarea", "", false, async (val) => { await addDoc(collection(db, COLL_NOTES()), { text: val, category: AppState.activeCategoryId, trashed: false, pinned: false, timestamp: Date.now() }); }); return; }
+            if (e.target.closest('#btn-add-cat')) {
+                openModal("NEW COLLECTION", "text", "", true, async (val, col) => {
+                    await addDoc(collection(db, COLL_CATS()), { name: val, color: col, trashed: false, pinned: false, timestamp: Date.now() });
+                });
+                return;
+            }
+            if (e.target.closest('#btn-add-note')) {
+                openModal("ADD INTEL", "textarea", "", true, async (val, col) => {
+                    await addDoc(collection(db, COLL_NOTES()), { text: val, color: col, category: AppState.activeCategoryId, trashed: false, pinned: false, timestamp: Date.now() });
+                });
+                return;
+            }
             if (e.target.closest('#btn-back-to-cats')) { 
                 document.documentElement.style.setProperty('--accent-secondary', 'var(--neon-blue)');
                 showView('categories'); 
                 return; 
             }
-            if (e.target.closest('#btn-back-to-notes')) { showView('notes'); return; }
+            if (e.target.closest('#btn-back-to-notes')) {
+                showView('notes');
+                return;
+            }
             
             if (e.target.closest('#btn-quick-paste')) {
                 try {
                     const text = await navigator.clipboard.readText();
-                    if(text) await addDoc(collection(db, COLL_NOTES()), { text: text, category: AppState.activeCategoryId, trashed: false, pinned: false, timestamp: Date.now() });
-                } catch(err) { alert("Clipboard permission denied or unavailable."); }
+                    if (text) {
+                        await addDoc(collection(db, COLL_NOTES()), { text: text, category: AppState.activeCategoryId, trashed: false, pinned: false, timestamp: Date.now() });
+                        showToast("Clipboard intelligence pasted & indexed.", "success");
+                    }
+                } catch (err) {
+                    showToast("Clipboard permission denied or unavailable.", "error");
+                }
                 return;
             }
 
-            const copyFullBtn = e.target.closest('#btn-copy-full'); if(copyFullBtn) { fallbackCopy(AppState.activeFullNoteText, copyFullBtn); return; }
+            const copyFullBtn = e.target.closest('#btn-copy-full');
+            if (copyFullBtn) {
+                fallbackCopy(AppState.activeFullNoteText, copyFullBtn);
+                return;
+            }
+
+            if (e.target.closest('#btn-send-to-cipher')) {
+                document.getElementById('cipher-input').value = AppState.activeFullNoteText;
+                document.getElementById('cipher-modal').classList.add('active');
+                return;
+            }
 
             const cardActionBtn = e.target.closest('.card-actions button');
-            const catCard = e.target.closest('.cat-card');
-            const noteCard = e.target.closest('.note-card');
+            const catCard = e.target.closest('#categories-view .cat-card');
+            const noteCard = e.target.closest('#notes-view .note-card');
 
             if (catCard) {
-                const id = catCard.dataset.id; const name = catCard.dataset.name;
+                const id = catCard.dataset.id;
+                const name = catCard.dataset.name;
                 if (cardActionBtn) {
                     const ref = doc(db, COLL_CATS(), id);
                     if (cardActionBtn.classList.contains('action-copy')) fallbackCopy(name, cardActionBtn);
-                    if (cardActionBtn.classList.contains('action-edit')) openModal("RENAME", "text", name, true, async (val, col) => await updateDoc(ref, { name: val, color: col }));
-                    if (cardActionBtn.classList.contains('action-delete')) await updateDoc(ref, { trashed: true, trashedAt: Date.now() });
-                    if (cardActionBtn.classList.contains('action-restore')) await updateDoc(ref, { trashed: false });
-                    if (cardActionBtn.classList.contains('action-perm') && confirm(`Permanently destroy collection?`)) await deleteDoc(ref);
+                    if (cardActionBtn.classList.contains('action-edit')) openModal("RENAME COLLECTION", "text", name, true, async (val, col) => await updateDoc(ref, { name: val, color: col }));
+                    if (cardActionBtn.classList.contains('action-delete')) {
+                        await updateDoc(ref, { trashed: true, trashedAt: Date.now() });
+                        showToast(`Moved "${name}" to Recycle Bin.`, "warn");
+                    }
+                    if (cardActionBtn.classList.contains('action-restore')) {
+                        await updateDoc(ref, { trashed: false });
+                        showToast(`Restored "${name}".`, "success");
+                    }
+                    if (cardActionBtn.classList.contains('action-perm')) {
+                        const confirmed = await requestConfirm(`Permanently destroy collection "${name}" from Firestore?`);
+                        if (confirmed) {
+                            await deleteDoc(ref);
+                            showToast(`Collection "${name}" permanently purged.`, "error");
+                        }
+                    }
                     if (cardActionBtn.classList.contains('action-pin')) {
                         const isPinned = catCard.querySelector('.card-inner').classList.contains('is-pinned');
                         await updateDoc(ref, { pinned: !isPinned });
@@ -639,60 +2363,105 @@
                     document.getElementById('active-cat-title').innerText = name; 
                     const themeColor = catCard.dataset.color !== 'var(--border-glass)' ? catCard.dataset.color : 'var(--neon-blue)';
                     document.documentElement.style.setProperty('--accent-secondary', themeColor);
-                    showView('notes'); loadNotes(id); 
+                    showView('notes');
+                    loadNotes(id); 
                 }
             }
 
             if (noteCard) {
-                const id = noteCard.dataset.id; const text = noteCard.dataset.text;
+                const id = noteCard.dataset.id;
+                const text = noteCard.dataset.text;
                 if (cardActionBtn) {
                     const ref = doc(db, COLL_NOTES(), id);
                     if (cardActionBtn.classList.contains('action-copy')) fallbackCopy(text, cardActionBtn);
-                    if (cardActionBtn.classList.contains('action-edit')) openModal("UPDATE INTEL", "textarea", text, false, async (val) => await updateDoc(ref, { text: val }));
-                    if (cardActionBtn.classList.contains('action-delete')) await updateDoc(ref, { trashed: true, trashedAt: Date.now() });
-                    if (cardActionBtn.classList.contains('action-restore')) await updateDoc(ref, { trashed: false });
-                    if (cardActionBtn.classList.contains('action-perm') && confirm("Permanently destroy intel?")) await deleteDoc(ref);
+                    if (cardActionBtn.classList.contains('action-edit')) openModal("UPDATE INTEL", "textarea", text, true, async (val, col) => await updateDoc(ref, { text: val, color: col }));
+                    if (cardActionBtn.classList.contains('action-delete')) {
+                        await updateDoc(ref, { trashed: true, trashedAt: Date.now() });
+                        showToast("Intel moved to Recycle Bin.", "warn");
+                    }
+                    if (cardActionBtn.classList.contains('action-restore')) {
+                        await updateDoc(ref, { trashed: false });
+                        showToast("Intel restored.", "success");
+                    }
+                    if (cardActionBtn.classList.contains('action-perm')) {
+                        const confirmed = await requestConfirm("Permanently destroy this intelligence block?");
+                        if (confirmed) {
+                            await deleteDoc(ref);
+                            showToast("Intelligence block permanently destroyed.", "error");
+                        }
+                    }
                     if (cardActionBtn.classList.contains('action-pin')) {
                         const isPinned = noteCard.querySelector('.card-inner').classList.contains('is-pinned');
                         await updateDoc(ref, { pinned: !isPinned });
                     }
                     if (cardActionBtn.classList.contains('action-clone')) {
                         await addDoc(collection(db, COLL_NOTES()), { text: text + "\n[CLONE]", category: AppState.activeCategoryId, trashed: false, pinned: false, timestamp: Date.now() });
+                        showToast("Cloned intelligence record.", "success");
                     }
                     return;
                 }
-                if (!noteCard.classList.contains('trashed-card')) { AppState.activeFullNoteText = text; document.getElementById('full-note-text').innerText = text; showView('fullNote'); }
+                if (!noteCard.classList.contains('trashed-card')) {
+                    openFullNoteInspection(text);
+                }
             }
         });
 
-        DOM.search.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            document.querySelectorAll('#notes-grid .note-card').forEach(card => card.classList.toggle('hidden', !card.dataset.text.toLowerCase().includes(term)));
-        });
-
+        // ==========================================================================
+        // 13. EXPORT & IMPORT INTEL PACKAGES
+        // ==========================================================================
         document.getElementById('btn-export').onclick = async () => {
-            const cSnap = await getDocs(collection(db, COLL_CATS())); const nSnap = await getDocs(collection(db, COLL_NOTES()));
-            const data = { categories: [], notes: [] };
-            cSnap.forEach(d => data.categories.push({ id: d.id, ...d.data() })); nSnap.forEach(d => data.notes.push({ id: d.id, ...d.data() }));
-            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'}));
-            a.download = `evil_vault_backup.json`; a.click();
+            SoundFX.scan();
+            const cSnap = await getDocs(collection(db, COLL_CATS()));
+            const nSnap = await getDocs(collection(db, COLL_NOTES()));
+            const oSnap = await getDocs(collection(db, COLL_OSINT()));
+            const data = { exportedAt: new Date().toISOString(), categories: [], notes: [], osintTargets: [] };
+            cSnap.forEach(d => data.categories.push({ id: d.id, ...d.data() }));
+            nSnap.forEach(d => data.notes.push({ id: d.id, ...d.data() }));
+            oSnap.forEach(d => data.osintTargets.push({ id: d.id, ...d.data() }));
+            
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+            a.download = `evil_vault_backup_${Date.now()}.json`;
+            a.click();
+            showToast("Exported complete Vault & OSINT package.", "success");
         };
 
         document.getElementById('btn-import').onclick = () => document.getElementById('import-file-input').click();
         document.getElementById('import-file-input').onchange = (e) => {
-            const file = e.target.files[0]; if (!file) return;
+            const file = e.target.files[0];
+            if (!file) return;
             const reader = new FileReader();
             reader.onload = async (event) => {
                 try {
-                    const data = JSON.parse(event.target.result); const map = {};
-                    for (const c of data.categories) { const ref = await addDoc(collection(db, COLL_CATS()), { name: c.name, color: c.color, trashed: c.trashed||false, pinned: c.pinned||false, timestamp: c.timestamp||Date.now() }); map[c.id] = ref.id; }
-                    for (const n of data.notes) { await addDoc(collection(db, COLL_NOTES()), { text: n.text, category: map[n.category] || n.category, trashed: n.trashed||false, pinned: n.pinned||false, timestamp: n.timestamp||Date.now() }); }
-                    alert("Import successful!");
-                } catch(err) { alert("Import failed."); } e.target.value = "";
-            }; reader.readAsText(file);
+                    const data = JSON.parse(event.target.result);
+                    const map = {};
+                    if (Array.isArray(data.categories)) {
+                        for (const c of data.categories) {
+                            const ref = await addDoc(collection(db, COLL_CATS()), { name: c.name, color: c.color, trashed: c.trashed || false, pinned: c.pinned || false, timestamp: c.timestamp || Date.now() });
+                            map[c.id] = ref.id;
+                        }
+                    }
+                    if (Array.isArray(data.notes)) {
+                        for (const n of data.notes) {
+                            await addDoc(collection(db, COLL_NOTES()), { text: n.text, category: map[n.category] || n.category, trashed: n.trashed || false, pinned: n.pinned || false, timestamp: n.timestamp || Date.now() });
+                        }
+                    }
+                    showToast("Intelligence package imported and merged!", "success");
+                } catch (err) {
+                    showToast("Import failed: Invalid JSON structure.", "error");
+                }
+                e.target.value = "";
+            };
+            reader.readAsText(file);
         };
 
-        // --- OSINT TARGET MANAGER & CLEAN PARSER ---
+        // ==========================================================================
+        // 14. OSINT TARGET MANAGER, CLEAN PARSER, VIS-NETWORK GRAPH & CHART.JS
+        // ==========================================================================
+        let visNetworkInstance = null;
+        let threatChartInstance = null;
+        let iocChartInstance = null;
+
         if (typeof window._osintUnsub === 'function') {
             window._osintUnsub();
         }
@@ -701,77 +2470,256 @@
             const grid = document.getElementById('osint-targets-grid');
             if (!grid) return;
 
-            window._osintUnsub = onSnapshot(collection(db, COLL_OSINT()), (snapshot) => {
-                grid.innerHTML = '';
-                let count = 0;
+            if (typeof window._osintUnsub === 'function') window._osintUnsub();
 
+            window._osintUnsub = onSnapshot(collection(db, COLL_OSINT()), (snapshot) => {
+                const items = [];
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
-                    count++;
-
                     let displayText = data.cleanText;
                     if (!displayText) {
-                        let lines = [];
+                        const lines = [];
                         if (data.targetName) lines.push(`NAME: ${data.targetName}`);
                         if (data.extracted?.phoneNumbers?.length) lines.push(`MOBILE: ${data.extracted.phoneNumbers[0]}`);
                         if (data.extracted?.emailAddresses?.length) lines.push(`EMAIL: ${data.extracted.emailAddresses[0]}`);
                         if (data.rawNotes) lines.push(`NOTES:\n${data.rawNotes}`);
                         displayText = lines.join('\n') || JSON.stringify(data, null, 2);
                     }
-
-                    const card = document.createElement('div');
-                    card.className = 'grid-card note-card';
-                    card.dataset.id = docSnap.id;
-                    card.dataset.text = displayText;
-
-                    card.innerHTML = `
-                        <div class="card-inner" style="--card-color: var(--neon-blue)">
-                            <div class="card-actions">
-                                <button class="btn-icon action-copy-target" title="Copy Formatted Text">${SVGS.copy}</button>
-                                <button class="btn-icon action-edit-target" title="Edit Target">${SVGS.edit}</button>
-                                <button class="btn-icon danger action-delete-target" title="Delete Target">${SVGS.trash}</button>
-                            </div>
-                            <div class="card-content" style="align-items: flex-start; justify-content: flex-start; text-align: left;">
-                                <h3 style="color: var(--neon-blue); margin-bottom: 8px;">${escapeHTML(data.targetName || docSnap.id)}</h3>
-                                <p style="font-size: 0.9rem; color: var(--text-main); white-space: pre-wrap; line-height: 1.5;">${escapeHTML(displayText)}</p>
-                            </div>
-                            <div class="timestamp">${formatDate(data.timestamp)}</div>
-                        </div>`;
-                    
-                    grid.appendChild(card);
+                    items.push({ id: docSnap.id, ...data, resolvedText: displayText });
                 });
 
-                if (count === 0) {
-                    grid.innerHTML = `<div class="empty-state"><h3>No OSINT Targets Logged</h3></div>`;
-                }
-            }, (err) => console.error("OSINT Load Error:", err));
+                AppState.cachedOsint = items;
+                document.getElementById('stat-total-osint').innerText = items.length;
+                renderOsintFromCache();
+            }, (err) => showToast("OSINT Database Sync Error", "error"));
         };
+
+        function renderOsintFromCache() {
+            const grid = document.getElementById('osint-targets-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const term = (document.getElementById('search-osint-input')?.value || '').trim();
+            let list = [...AppState.cachedOsint];
+
+            if (AppState.osintRiskFilter !== 'ALL') {
+                list = list.filter(t => (t.riskLevel || 'MEDIUM') === AppState.osintRiskFilter);
+            }
+
+            if (term && window.Fuse) {
+                const fuse = new Fuse(list, { keys: ['targetName', 'resolvedText', 'riskLevel'], threshold: 0.36 });
+                list = fuse.search(term).map(r => r.item);
+            } else if (term) {
+                list = list.filter(t => (t.resolvedText || '').toLowerCase().includes(term.toLowerCase()) || (t.targetName || '').toLowerCase().includes(term.toLowerCase()));
+            }
+
+            list.forEach(data => {
+                const risk = data.riskLevel || 'MEDIUM';
+                const iocs = extractIOCs(data.resolvedText);
+                const card = document.createElement('div');
+                card.className = 'grid-card note-card';
+                card.dataset.id = data.id;
+                card.dataset.text = data.resolvedText;
+
+                const borderCol = risk === 'CRITICAL' ? 'var(--neon-red)' : risk === 'HIGH' ? 'var(--neon-orange)' : risk === 'LOW' ? 'var(--neon-green)' : 'var(--neon-blue)';
+
+                card.innerHTML = `
+                    <div class="card-inner" style="--card-color: ${borderCol}">
+                        <div class="card-actions">
+                            <button class="btn-icon action-copy-target" title="Copy Formatted Dossier">${SVGS.copy}</button>
+                            <button class="btn-icon action-edit-target" title="Edit Target">${SVGS.edit}</button>
+                            <button class="btn-icon danger action-delete-target" title="Delete Target">${SVGS.trash}</button>
+                        </div>
+                        <div class="card-content" style="align-items: flex-start; justify-content: flex-start; text-align: left;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom: 8px; flex-wrap:wrap;">
+                                <h3 style="color: ${borderCol};">${escapeHTML(data.targetName || data.id)}</h3>
+                                <span class="intel-badge risk-${risk}">${risk}</span>
+                            </div>
+                            <p style="font-size: 0.88rem; color: var(--text-main); white-space: pre-wrap; line-height: 1.55; font-family: var(--font-mono);">${escapeHTML(data.resolvedText)}</p>
+                        </div>
+                        <div class="card-footer-meta">
+                            <span class="timestamp">${formatDate(data.timestamp)}</span>
+                            <span class="intel-badge">IOCs: ${iocs.total}</span>
+                        </div>
+                    </div>`;
+                
+                grid.appendChild(card);
+            });
+
+            if (list.length === 0) {
+                grid.innerHTML = `<div class="empty-state"><h3>No Matching OSINT Targets Logged</h3></div>`;
+            }
+
+            if (AppState.osintViewMode === 'graph') buildOsintVisNetwork(list);
+            if (AppState.osintViewMode === 'analytics') buildOsintCharts(list);
+        }
+
+        // Vis-Network Node Link Analysis Builder
+        function buildOsintVisNetwork(targets) {
+            const container = document.getElementById('osint-graph-container');
+            if (!container || !window.vis) return;
+
+            const nodes = [];
+            const edges = [];
+            const addedNodes = new Set();
+
+            const addNodeSafe = (id, label, color, shape = 'dot', size = 18) => {
+                if (!addedNodes.has(id)) {
+                    addedNodes.add(id);
+                    nodes.push({
+                        id,
+                        label,
+                        shape,
+                        size,
+                        color: { background: color, border: '#ffffff', highlight: { background: '#ffffff', border: color } },
+                        font: { color: '#f0f6fc', face: 'Share Tech Mono', size: 12 }
+                    });
+                }
+            };
+
+            targets.forEach(t => {
+                const tId = `target_${t.id}`;
+                const tLabel = t.targetName || t.id;
+                addNodeSafe(tId, `🎯 ${tLabel}`, '#ff003c', 'hexagon', 24);
+
+                const lines = (t.resolvedText || '').split('\n');
+                lines.forEach(line => {
+                    const [keyRaw, ...rest] = line.split(':');
+                    const val = rest.join(':').trim();
+                    if (!val) return;
+                    const key = (keyRaw || '').trim().toUpperCase();
+
+                    if (key.includes('MOBILE') || key.includes('ALTERNATE')) {
+                        const nId = `tel_${val}`;
+                        addNodeSafe(nId, `📞 ${val}`, '#00e5ff', 'dot', 15);
+                        edges.push({ from: tId, to: nId, label: key, font: { size: 9, color: '#8b949e' }, color: 'rgba(0,229,255,0.4)' });
+                    } else if (key.includes('FATHER')) {
+                        const nId = `rel_${val}`;
+                        addNodeSafe(nId, `👨 ${val}`, '#ffaa00', 'dot', 16);
+                        edges.push({ from: tId, to: nId, label: 'FATHER', font: { size: 9, color: '#8b949e' }, color: 'rgba(255,170,0,0.4)' });
+                    } else if (key.includes('ADDRESS')) {
+                        const nId = `loc_${val}`;
+                        addNodeSafe(nId, `📍 ${val.substring(0, 24)}`, '#00ff66', 'triangle', 15);
+                        edges.push({ from: tId, to: nId, label: 'LOC', font: { size: 9, color: '#8b949e' }, color: 'rgba(0,255,102,0.4)' });
+                    } else if (key.includes('ID') || key.includes('EMAIL') || key.includes('IP')) {
+                        const nId = `id_${val}`;
+                        addNodeSafe(nId, `🆔 ${val}`, '#b026ff', 'diamond', 15);
+                        edges.push({ from: tId, to: nId, label: key, font: { size: 9, color: '#8b949e' }, color: 'rgba(176,38,255,0.4)' });
+                    }
+                });
+            });
+
+            if (visNetworkInstance) visNetworkInstance.destroy();
+            visNetworkInstance = new vis.Network(
+                container,
+                { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) },
+                {
+                    physics: { stabilization: false, barnesHut: { gravitationalConstant: -2800, springLength: 130 } },
+                    interaction: { hover: true, tooltipDelay: 100 }
+                }
+            );
+        }
+
+        // Chart.js Threat & IOC Telemetry Builder
+        function buildOsintCharts(targets) {
+            if (!window.Chart) return;
+            const riskCounts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+            const iocTotals = { IPv4: 0, Emails: 0, Phones: 0, URLs: 0, Crypto: 0 };
+
+            targets.forEach(t => {
+                const r = t.riskLevel || 'MEDIUM';
+                if (riskCounts[r] !== undefined) riskCounts[r]++;
+                const iocs = extractIOCs(t.resolvedText);
+                iocTotals.IPv4 += iocs.ips.length;
+                iocTotals.Emails += iocs.emails.length;
+                iocTotals.Phones += iocs.phones.length;
+                iocTotals.URLs += iocs.urls.length;
+                iocTotals.Crypto += iocs.crypto.length;
+            });
+
+            const ctx1 = document.getElementById('chart-threat-levels');
+            const ctx2 = document.getElementById('chart-ioc-types');
+            if (threatChartInstance) threatChartInstance.destroy();
+            if (iocChartInstance) iocChartInstance.destroy();
+
+            threatChartInstance = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
+                    datasets: [{
+                        data: [riskCounts.CRITICAL, riskCounts.HIGH, riskCounts.MEDIUM, riskCounts.LOW],
+                        backgroundColor: ['#ff003c', '#ffaa00', '#00e5ff', '#00ff66'],
+                        borderColor: '#12040e',
+                        borderWidth: 2
+                    }]
+                },
+                options: { plugins: { legend: { labels: { color: '#f0f6fc', font: { family: 'Share Tech Mono' } } } } }
+            });
+
+            iocChartInstance = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(iocTotals),
+                    datasets: [{
+                        label: 'Extracted Entities',
+                        data: Object.values(iocTotals),
+                        backgroundColor: 'rgba(0, 229, 255, 0.5)',
+                        borderColor: '#00e5ff',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { ticks: { color: '#8b949e', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { ticks: { color: '#f0f6fc', font: { family: 'Share Tech Mono' } }, grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // OSINT View Mode Toggles (Cards / Link Graph / Analytics)
+        const setOsintSubView = (mode) => {
+            AppState.osintViewMode = mode;
+            document.getElementById('btn-osint-mode-grid').classList.toggle('active-toggle', mode === 'cards');
+            document.getElementById('btn-osint-mode-graph').classList.toggle('active-toggle', mode === 'graph');
+            document.getElementById('btn-osint-mode-analytics').classList.toggle('active-toggle', mode === 'analytics');
+
+            document.getElementById('osint-targets-grid').classList.toggle('hidden', mode !== 'cards');
+            document.getElementById('osint-graph-wrapper').classList.toggle('hidden', mode !== 'graph');
+            document.getElementById('osint-analytics-container').classList.toggle('hidden', mode !== 'analytics');
+            renderOsintFromCache();
+        };
+
+        document.getElementById('btn-osint-mode-grid').onclick = () => setOsintSubView('cards');
+        document.getElementById('btn-osint-mode-graph').onclick = () => setOsintSubView('graph');
+        document.getElementById('btn-osint-mode-analytics').onclick = () => setOsintSubView('analytics');
+
+        // OSINT Risk Filter Pills
+        document.querySelectorAll('#osint-risk-filters .filter-pill').forEach(pill => {
+            pill.onclick = () => {
+                document.querySelectorAll('#osint-risk-filters .filter-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                AppState.osintRiskFilter = pill.dataset.risk;
+                renderOsintFromCache();
+            };
+        });
 
         const triggerOsintModal = () => {
-            const modalOverlay = document.getElementById('osint-modal');
-            const nameInput = document.getElementById('osint-target-name');
-            const rawArea = document.getElementById('osint-raw-data');
-            
-            if (!modalOverlay || !nameInput) return;
-            
-            nameInput.value = '';
-            rawArea.value = '';
-            modalOverlay.classList.add('active');
-            setTimeout(() => nameInput.focus(), 100);
+            SoundFX.click();
+            DOM.osintModal.nameInput.value = '';
+            DOM.osintModal.rawArea.value = '';
+            DOM.osintModal.riskSelect.value = 'MEDIUM';
+            DOM.osintModal.overlay.classList.add('active');
+            setTimeout(() => DOM.osintModal.nameInput.focus(), 100);
         };
 
-        const btnOsintEl = document.getElementById('btn-osint');
-        if (btnOsintEl) {
-            btnOsintEl.onclick = () => {
-                showView('osint');
-                window.loadOsintTargets();
-            };
-        }
+        document.getElementById('btn-osint').onclick = () => {
+            showView('osint');
+            window.loadOsintTargets();
+        };
 
-        const backFromOsintEl = document.getElementById('btn-back-from-osint');
-        if (backFromOsintEl) {
-            backFromOsintEl.onclick = () => showView('categories');
-        }
+        document.getElementById('btn-back-from-osint').onclick = () => showView('categories');
 
         document.addEventListener('click', (e) => {
             if (e.target.closest('#btn-open-osint-modal')) {
@@ -780,100 +2728,94 @@
             }
         });
 
-        const osintCancelBtnEl = document.getElementById('osint-btn-cancel');
-        if (osintCancelBtnEl) {
-            osintCancelBtnEl.onclick = () => {
-                const modalOverlay = document.getElementById('osint-modal');
-                if (modalOverlay) modalOverlay.classList.remove('active');
-            };
-        }
+        DOM.osintModal.btnCancel.onclick = () => DOM.osintModal.overlay.classList.remove('active');
 
-        const osintSaveBtnEl = document.getElementById('osint-btn-save');
-        if (osintSaveBtnEl) {
-            osintSaveBtnEl.onclick = async () => {
-                const nameInput = document.getElementById('osint-target-name');
-                const rawArea = document.getElementById('osint-raw-data');
-                const modalOverlay = document.getElementById('osint-modal');
+        // Upgraded OSINT Target Parser (Preserves exact user parsing fields + auto-IOC extraction)
+        DOM.osintModal.btnSave.onclick = async () => {
+            const targetNameInput = DOM.osintModal.nameInput.value.trim();
+            const rawData = DOM.osintModal.rawArea.value.trim();
+            const riskLevel = DOM.osintModal.riskSelect.value || 'MEDIUM';
 
-                const targetNameInput = nameInput ? nameInput.value.trim() : '';
-                const rawData = rawArea ? rawArea.value.trim() : '';
+            if (!targetNameInput || !rawData) {
+                showToast("Please provide both a Target Name and Raw Data.", "warn");
+                return;
+            }
 
-                if (!targetNameInput || !rawData) {
-                    alert("Please provide both a Target Name and Raw Data.");
-                    return;
-                }
+            const docId = targetNameInput.replace(/[^a-zA-Z0-9-_]/g, "_");
+            const lines = rawData.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            
+            let parsedName = targetNameInput;
+            let parsedMobile = '';
+            let parsedFather = '';
+            let parsedAlternative = '';
+            let parsedId = '';
+            let parsedAddress = '';
 
-                const docId = targetNameInput.replace(/[^a-zA-Z0-9-_]/g, "_");
+            lines.forEach(rawLine => {
+                const line = rawLine.replace(/[\u{1F000}-\u{1F6FF}]|[\u{1F900}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[═]/gu, '').trim();
+                const upper = line.toUpperCase();
 
-                const lines = rawData.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-                
-                let parsedName = targetNameInput;
-                let parsedMobile = '';
-                let parsedFather = '';
-                let parsedAlternative = '';
-                let parsedId = '';
-                let parsedAddress = '';
-
-                lines.forEach(rawLine => {
-                    const line = rawLine.replace(/[\u{1F000}-\u{1F6FF}]|[\u{1F900}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[═]/gu, '').trim();
-                    const upper = line.toUpperCase();
-
-                    if ((upper.includes('NAME') || upper.includes('👤')) && !upper.includes('FATHER')) {
-                        const parts = line.split(/[:|-]/);
-                        if (parts[1]) parsedName = parts.slice(1).join(':').trim();
-                    } else if (upper.includes('MOBILE') || upper.includes('NUMBER') || upper.includes('📞')) {
-                        const parts = line.split(/[:|-]/);
-                        if (parts[1]) parsedMobile = parts.slice(1).join(':').trim();
-                    } else if (upper.includes('FATHER') || upper.includes('👨')) {
-                        const parts = line.split(/[:|-]/);
-                        if (parts[1]) parsedFather = parts.slice(1).join(':').trim();
-                    } else if (upper.includes('ALTERNATIVE') || upper.includes('ALT') || upper.includes('📱')) {
-                        const parts = line.split(/[:|-]/);
-                        if (parts[1]) parsedAlternative = parts.slice(1).join(':').trim();
-                    } else if (upper.includes('ID') || upper.includes('🆔')) {
-                        const parts = line.split(/[:|-]/);
-                        if (parts[1]) parsedId = parts.slice(1).join(':').trim();
-                    } else if (upper.includes('ADDRESS') || upper.includes('📍')) {
-                        const parts = line.split(/[:|-]/);
-                        if (parts[1]) {
-                            parsedAddress = parts.slice(1).join(':').trim();
-                            if (parsedAddress.startsWith(',')) parsedAddress = parsedAddress.substring(1).trim();
-                        }
+                if ((upper.includes('NAME') || rawLine.includes('👤')) && !upper.includes('FATHER')) {
+                    const parts = line.split(/[:|-]/);
+                    if (parts[1]) parsedName = parts.slice(1).join(':').trim();
+                } else if (upper.includes('MOBILE') || upper.includes('NUMBER') || rawLine.includes('📞')) {
+                    const parts = line.split(/[:|-]/);
+                    if (parts[1]) parsedMobile = parts.slice(1).join(':').trim();
+                } else if (upper.includes('FATHER') || rawLine.includes('👨')) {
+                    const parts = line.split(/[:|-]/);
+                    if (parts[1]) parsedFather = parts.slice(1).join(':').trim();
+                } else if (upper.includes('ALTERNATIVE') || upper.includes('ALT') || rawLine.includes('📱')) {
+                    const parts = line.split(/[:|-]/);
+                    if (parts[1]) parsedAlternative = parts.slice(1).join(':').trim();
+                } else if (upper.includes('ID') || rawLine.includes('🆔')) {
+                    const parts = line.split(/[:|-]/);
+                    if (parts[1]) parsedId = parts.slice(1).join(':').trim();
+                } else if (upper.includes('ADDRESS') || rawLine.includes('📍')) {
+                    const parts = line.split(/[:|-]/);
+                    if (parts[1]) {
+                        parsedAddress = parts.slice(1).join(':').trim();
+                        if (parsedAddress.startsWith(',')) parsedAddress = parsedAddress.substring(1).trim();
                     }
-                });
-
-                if (parsedMobile === parsedAlternative) {
-                    parsedAlternative = '';
                 }
+            });
 
-                let cleanLines = [];
-                cleanLines.push(`NAME: ${parsedName}`);
-                if (parsedMobile) cleanLines.push(`MOBILE: ${parsedMobile}`);
-                if (parsedFather) cleanLines.push(`FATHER: ${parsedFather}`);
-                if (parsedAlternative) cleanLines.push(`ALTERNATE NUMBER: ${parsedAlternative}`);
-                if (parsedId) cleanLines.push(`ID: ${parsedId}`);
-                if (parsedAddress) cleanLines.push(`ADDRESS: ${parsedAddress}`);
+            if (parsedMobile === parsedAlternative) {
+                parsedAlternative = '';
+            }
 
-                const formattedCleanText = cleanLines.join('\n');
+            // Auto-extract additional IOCs from raw dump
+            const autoIOCs = extractIOCs(rawData);
 
-                const structuredData = {
-                    targetName: targetNameInput,
-                    createdAt: new Date().toISOString(),
-                    timestamp: Date.now(),
-                    cleanText: formattedCleanText
-                };
+            const cleanLines = [];
+            cleanLines.push(`NAME: ${parsedName}`);
+            if (parsedMobile) cleanLines.push(`MOBILE: ${parsedMobile}`);
+            if (parsedFather) cleanLines.push(`FATHER: ${parsedFather}`);
+            if (parsedAlternative) cleanLines.push(`ALTERNATE NUMBER: ${parsedAlternative}`);
+            if (parsedId) cleanLines.push(`ID: ${parsedId}`);
+            if (parsedAddress) cleanLines.push(`ADDRESS: ${parsedAddress}`);
+            if (autoIOCs.ips.length) cleanLines.push(`IP: ${autoIOCs.ips.join(', ')}`);
+            if (autoIOCs.emails.length) cleanLines.push(`EMAIL: ${autoIOCs.emails.join(', ')}`);
 
-                try {
-                    await setDoc(doc(db, COLL_OSINT(), docId), structuredData);
-                    alert(`OSINT Target "${targetNameInput}" successfully parsed and saved!`);
-                    if (modalOverlay) modalOverlay.classList.remove('active');
-                    window.loadOsintTargets();
-                } catch (err) {
-                    console.error("OSINT Save Error:", err);
-                    alert("Failed to save target to Firebase.");
-                }
+            const formattedCleanText = cleanLines.join('\n');
+
+            const structuredData = {
+                targetName: targetNameInput,
+                riskLevel: riskLevel,
+                createdAt: new Date().toISOString(),
+                timestamp: Date.now(),
+                cleanText: formattedCleanText
             };
-        }
+
+            try {
+                await setDoc(doc(db, COLL_OSINT(), docId), structuredData);
+                showToast(`OSINT Target "${targetNameInput}" parsed and saved!`, "success");
+                DOM.osintModal.overlay.classList.remove('active');
+                window.loadOsintTargets();
+            } catch (err) {
+                console.error("OSINT Save Error:", err);
+                showToast("Failed to save target to Firebase.", "error");
+            }
+        };
 
         document.addEventListener('click', async (e) => {
             const targetCard = e.target.closest('#osint-targets-grid .grid-card');
@@ -892,20 +2834,186 @@
                         await updateDoc(ref, { cleanText: newVal });
                     });
                 }
-                if (actionBtn.classList.contains('action-delete-target') && confirm("Permanently delete this OSINT target?")) {
-                    await deleteDoc(ref);
+                if (actionBtn.classList.contains('action-delete-target')) {
+                    const confirmed = await requestConfirm(`Permanently purge OSINT target "${id}"?`);
+                    if (confirmed) {
+                        await deleteDoc(ref);
+                        showToast(`OSINT Target "${id}" deleted.`, "error");
+                    }
+                }
+                return;
+            }
+            if (targetCard && !actionBtn) {
+                openFullNoteInspection(targetCard.dataset.text);
+            }
+        });
+
+        document.getElementById('search-osint-input').addEventListener('input', renderOsintFromCache);
+
+        // ==========================================================================
+        // 15. CYBER-DECK CIPHER & CRYPTOGRAPHIC SUITE
+        // ==========================================================================
+        document.getElementById('btn-cipher-tool').onclick = () => {
+            SoundFX.click();
+            document.getElementById('cipher-modal').classList.add('active');
+        };
+        document.getElementById('cipher-btn-close').onclick = () => {
+            document.getElementById('cipher-modal').classList.remove('active');
+        };
+        document.getElementById('cipher-btn-copy').onclick = (e) => {
+            const out = document.getElementById('cipher-output').value;
+            if (out) fallbackCopy(out, e.currentTarget);
+        };
+
+        document.querySelectorAll('.cipher-op').forEach(btn => {
+            btn.onclick = async () => {
+                SoundFX.scan();
+                const input = document.getElementById('cipher-input').value;
+                const outEl = document.getElementById('cipher-output');
+                const op = btn.dataset.op;
+                if (!input) {
+                    showToast("Enter payload text to process.", "warn");
+                    return;
+                }
+                try {
+                    if (op === 'b64-enc') {
+                        outEl.value = btoa(unescape(encodeURIComponent(input)));
+                    } else if (op === 'b64-dec') {
+                        outEl.value = decodeURIComponent(escape(atob(input.trim())));
+                    } else if (op === 'hex-enc') {
+                        outEl.value = Array.from(input).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join(' ');
+                    } else if (op === 'hex-dec') {
+                        const cleanHex = input.replace(/\s+/g, '');
+                        let str = '';
+                        for (let i = 0; i < cleanHex.length; i += 2) {
+                            str += String.fromCharCode(parseInt(cleanHex.substr(i, 2), 16));
+                        }
+                        outEl.value = str;
+                    } else if (op === 'rot13') {
+                        outEl.value = input.replace(/[a-zA-Z]/g, c => String.fromCharCode((c <= 'Z' ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26));
+                    } else if (op === 'sha256') {
+                        const msgBuffer = new TextEncoder().encode(input);
+                        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                        const hashArray = Array.from(new Uint8Array(hashBuffer));
+                        outEl.value = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                    }
+                    showToast(`Executed ${op.toUpperCase()} transform.`, "success");
+                } catch (e) {
+                    outEl.value = "[DECODE ERROR] Malformed input stream.";
+                    showToast("Cipher transformation failed.", "error");
+                }
+            };
+        });
+
+        // ==========================================================================
+        // 16. INTERACTIVE TERMINAL CLI DRAWER ENGINE
+        // ==========================================================================
+        const termDrawer = document.getElementById('terminal-drawer');
+        const termInput = document.getElementById('term-input');
+        const termOutput = document.getElementById('term-output');
+
+        function toggleCliDrawer() {
+            SoundFX.click();
+            termDrawer.classList.toggle('closed');
+            if (!termDrawer.classList.contains('closed')) {
+                setTimeout(() => termInput.focus(), 100);
+            }
+        }
+
+        document.getElementById('btn-cli-toggle').onclick = toggleCliDrawer;
+        document.getElementById('btn-close-cli').onclick = toggleCliDrawer;
+
+        function printTerm(text, color = '#d1fae5') {
+            const div = document.createElement('div');
+            div.className = 'term-line';
+            div.style.color = color;
+            div.innerText = text;
+            termOutput.appendChild(div);
+            termOutput.scrollTop = termOutput.scrollHeight;
+        }
+
+        termInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const rawCmd = termInput.value.trim();
+                termInput.value = '';
+                if (!rawCmd) return;
+
+                printTerm(`root@evil-vault:~# ${rawCmd}`, '#00ff66');
+                SoundFX.click();
+
+                const [cmd, ...args] = rawCmd.split(' ');
+                const argStr = args.join(' ');
+
+                switch (cmd.toLowerCase()) {
+                    case 'help':
+                        printTerm("Available Tactical Commands:", "#00e5ff");
+                        printTerm("  status              - Show enclave collections & OSINT target telemetry");
+                        printTerm("  scan <query>        - Search OSINT target database by keyword");
+                        printTerm("  ioc                 - Summarize all extracted IOCs across active notes");
+                        printTerm("  cipher              - Open Cyber-Deck cryptographic suite");
+                        printTerm("  matrix              - Toggle Matrix Digital Rain canvas");
+                        printTerm("  crt                 - Toggle CRT Scanline filter");
+                        printTerm("  export              - Export full Vault backup JSON");
+                        printTerm("  panic               - Activate Corporate Spreadsheet Duress Screen");
+                        printTerm("  lock                - Immediately lock Evil Vault session");
+                        printTerm("  clear               - Clear terminal scrollback buffer");
+                        break;
+                    case 'status':
+                        printTerm(`[ENCLAVE] Mode: ${AppState.isDecoy ? 'DECOY' : 'ALPHA MASTER'} | Collections: ${AppState.cachedCategories.length} | OSINT Targets: ${AppState.cachedOsint.length}`, "#00e5ff");
+                        break;
+                    case 'scan':
+                        if (!argStr) {
+                            printTerm("Usage: scan <target_keyword>", "#ffaa00");
+                        } else {
+                            SoundFX.scan();
+                            const matches = AppState.cachedOsint.filter(t => (t.resolvedText || '').toLowerCase().includes(argStr.toLowerCase()) || (t.targetName || '').toLowerCase().includes(argStr.toLowerCase()));
+                            printTerm(`[SCAN RESULT] Found ${matches.length} matching OSINT dossier(s) for "${argStr}":`, "#00e5ff");
+                            matches.forEach(m => printTerm(` -> [${m.riskLevel || 'MEDIUM'}] ${m.targetName || m.id}: ${m.resolvedText.replace(/\n/g, ' | ')}`));
+                        }
+                        break;
+                    case 'ioc': {
+                        let totalIPs = 0, totalMails = 0, totalPhones = 0;
+                        AppState.cachedNotes.forEach(n => {
+                            const res = extractIOCs(n.text);
+                            totalIPs += res.ips.length;
+                            totalMails += res.emails.length;
+                            totalPhones += res.phones.length;
+                        });
+                        printTerm(`[IOC TELEMETRY] Active Category Notes -> IPv4: ${totalIPs} | Emails: ${totalMails} | Phones: ${totalPhones}`, "#ffaa00");
+                        break;
+                    }
+                    case 'cipher':
+                        document.getElementById('cipher-modal').classList.add('active');
+                        printTerm("[SYSTEM] Launched Cyber-Deck Cryptographic Suite.");
+                        break;
+                    case 'matrix':
+                        document.getElementById('btn-matrix-toggle').click();
+                        break;
+                    case 'crt':
+                        document.getElementById('btn-crt-toggle').click();
+                        break;
+                    case 'export':
+                        document.getElementById('btn-export').click();
+                        break;
+                    case 'panic':
+                        triggerPanicScreen();
+                        break;
+                    case 'lock':
+                        toggleCliDrawer();
+                        lockApp();
+                        break;
+                    case 'clear':
+                        termOutput.innerHTML = '';
+                        break;
+                    default:
+                        printTerm(`Unknown command: "${cmd}". Type "help" for available commands.`, "#ff003c");
                 }
             }
         });
 
-        const searchOsintInputEl = document.getElementById('search-osint-input');
-        if (searchOsintInputEl) {
-            searchOsintInputEl.addEventListener('input', (e) => {
-                const term = e.target.value.toLowerCase();
-                document.querySelectorAll('#osint-targets-grid .grid-card').forEach(card => {
-                    card.classList.toggle('hidden', !card.dataset.text.toLowerCase().includes(term));
-                });
-            });
+        // Initialize Lucide icons if loaded
+        if (window.lucide) {
+            lucide.createIcons();
         }
     </script>
 </body>
